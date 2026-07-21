@@ -12,7 +12,7 @@
 
 ### Roles
 - `admin`
-- `member`
+- `LA_OS`
 
 Admin privileges should use custom claims.
 

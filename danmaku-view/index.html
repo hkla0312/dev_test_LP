@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DANMAKU VIEW | Legendary Apocalypse</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="danmaku-view" aria-label="DANMAKU VIEW sample">
+    <div class="ambient ambient-haze" aria-hidden="true"></div>
+    <div class="ambient ambient-beam beam-one" aria-hidden="true"></div>
+    <div class="ambient ambient-beam beam-two" aria-hidden="true"></div>
+    <div class="ambient ambient-beam beam-three" aria-hidden="true"></div>
+    <div class="ambient ambient-particles" aria-hidden="true"></div>
+
+    <header class="live-header">
+      <div class="brand">LEGENDARY APOCALYPSE</div>
+      <div class="event-key"><span>SAMPLE EVENT // VOL.00</span><b>//</b><span>LIVE DANMAKU</span></div>
+      <div class="header-actions">
+        <div class="live-status"><i></i>ON AIR</div>
+      </div>
+    </header>
+
+    <section class="comment-stage" aria-live="polite" aria-label="流れるコメント">
+      <div id="comment-layer"></div>
+      <p id="danmaku-loading" class="danmaku-loading" aria-live="polite">LOADING<span>...</span></p>
+    </section>
+
+    <footer class="signal-footer">
+      <span>AUDIENCE SIGNAL</span>
+      <canvas id="signal-canvas" aria-label="コメント量に応じて変化する疑似波形"></canvas>
+    </footer>
+
+    <aside id="signal-popup" class="signal-popup" aria-live="polite" aria-hidden="true">
+      <span class="popup-label">NEW SIGNAL</span>
+      <p id="popup-comment"></p>
+      <span class="popup-meta">LIVE DANMAKU / PICK UP</span>
+    </aside>
+  </main>
+  <script src="app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="../LA_OS/firebase-config.js"></script>
+  <script src="../shared/demo-danmaku-event.js"></script>
+  <script src="live-feed.js"></script>
+</body>
+</html>

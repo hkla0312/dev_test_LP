@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legendary Apocalypse</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="lp-modal.css">
+<link rel="stylesheet" href="brand-logo.css">
+<style>.global-nav button{background:none;border:0;color:#38f5ff}.role-organizer{box-shadow:0 0 25px #38f5ff}.role-new-act{box-shadow:0 0 18px #6bffb0}.role-artist{box-shadow:0 0 18px #ff9d4e}.regular-level-1{box-shadow:0 0 14px #ff4e4e}.regular-level-2{box-shadow:0 0 23px #ff704e}.regular-level-3{box-shadow:0 0 32px #ffb34e}.regular-level-4{box-shadow:0 0 40px #ffe36b}.laos-content{animation:slide .3s ease}@keyframes slide{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}input{display:block;width:100%;margin:6px 0 14px;padding:10px;background:#050608;border:1px solid #92a3be;color:#fff}</style>
+<style>.contact-note>p:first-child{margin-bottom:3.4rem}.flyer{aspect-ratio:16/9;background:#182337;color:#38f5ff;display:grid;place-items:center;font:600 11px Orbitron}.laos-content{display:block;max-height:0;overflow:hidden;opacity:0;transform:translateY(-10px);transition:max-height .3s ease,opacity .3s ease,transform .3s ease}.laos-content.open{max-height:520px;opacity:1;transform:none}.site-header .global-nav{transition:transform .3s ease,opacity .3s ease}.site-header.is-open .global-nav{animation:menu-slide .3s ease}@keyframes menu-slide{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}</style>
+<style>.artist-card-info{position:relative}.artist-version{position:absolute;right:0;bottom:0;font:600 9px Orbitron;color:#92a3be;font-style:normal;letter-spacing:.06em}</style>
+<style>.artist-card[data-i="8"]{background:#ff4edb!important;box-shadow:0 0 28px #ff4edb,0 0 12px #ff8ae8!important}.laos-trigger strong{font-size:48px}.laos-content h3{font:600 19px Orbitron;color:#38f5ff;margin:0 0 16px}.laos-content p{color:#92a3be;font-size:13px;margin:22px 0 14px}</style>
+<style>.signal-canvas{width:160px;height:160px}.profile-version{font:600 11px Orbitron;color:#92a3be;white-space:nowrap}.artist-card[data-i="8"]{box-shadow:0 0 14px #ff4edb,0 0 6px #ff8ae8!important}.artist-card[data-i="8"] .artist-version{font-size:0}.artist-card[data-i="8"] .artist-version:after{content:"v1.01";font:600 9px Orbitron;color:#92a3be}</style>
+<style>.artist-card[data-i="8"]{background:linear-gradient(135deg,#050608,#47515d,#11151b)!important;box-shadow:0 0 12px #d6dde6!important;border-color:#d6dde6!important}.laos-card{border-color:#fff!important;box-shadow:0 0 18px rgba(255,255,255,.38)!important}.danmaku-screen{min-height:160px}.danmaku-track{white-space:normal;display:grid!important;grid-template-columns:repeat(2,max-content);grid-auto-rows:28px;gap:2px 48px;animation:danmaku 18s linear infinite}.danmaku-item{white-space:nowrap}</style>
+<style>.profile-thumbnail{display:block;width:100%;max-height:260px;object-fit:cover;border:1px solid rgba(146,163,190,.2)}.danmaku-item:before{content:"#000";color:#38f5ff;margin-right:2px}</style>
+<style>.danmaku-track{animation:none!important;display:block!important;position:relative;height:145px;overflow:hidden}.danmaku-item{position:absolute;left:0;animation:danmaku-row 15s linear infinite!important}.danmaku-item:nth-child(1){top:4px;animation-delay:0s!important}.danmaku-item:nth-child(2){top:31px;animation-delay:-3s!important}.danmaku-item:nth-child(3){top:58px;animation-delay:-6s!important}.danmaku-item:nth-child(4){top:85px;animation-delay:-9s!important}.danmaku-item:nth-child(5){top:112px;animation-delay:-12s!important}.danmaku-item:nth-child(n+6){display:none}@keyframes danmaku-row{from{transform:translateX(105vw)}to{transform:translateX(-125%)}}</style>
+<style>.danmaku-item{animation-duration:3s!important}.danmaku-item:nth-child(2){animation-delay:-.6s!important}.danmaku-item:nth-child(3){animation-delay:-1.2s!important}.danmaku-item:nth-child(4){animation-delay:-1.8s!important}.danmaku-item:nth-child(5){animation-delay:-2.4s!important}</style>
+<style>.danmaku-track{display:grid!important;grid-template-columns:repeat(2,max-content)!important;grid-template-rows:repeat(5,28px);align-items:center;gap:0 52px;height:145px!important;position:static!important}.danmaku-item,.danmaku-item:nth-child(n+6){display:block!important;position:static!important;animation:none!important;transform:none!important}.danmaku-item:nth-child(even){margin-left:28px}</style>
+<style>.danmaku-track{position:relative!important;display:block!important}.danmaku-item{position:absolute!important;white-space:nowrap}.danmaku-random-0{top:5px;left:3%;letter-spacing:.03em}.danmaku-random-1{top:32px;left:48%;letter-spacing:.1em}.danmaku-random-2{top:59px;left:16%;letter-spacing:.02em}.danmaku-random-3{top:86px;left:57%;letter-spacing:.08em}.danmaku-random-4{top:113px;left:31%;letter-spacing:.04em}.danmaku-random-5{top:113px;left:67%;letter-spacing:.12em}</style>
+<style>.danmaku-screen{min-height:108px}.danmaku-track{height:96px!important}.danmaku-random-0{top:4px;left:3%;letter-spacing:.03em}.danmaku-random-1{top:4px;left:52%;letter-spacing:.08em}.danmaku-random-2{top:36px;left:12%;letter-spacing:.02em}.danmaku-random-3{top:36px;left:59%;letter-spacing:.06em}.danmaku-random-4{top:68px;left:6%;letter-spacing:.04em}.danmaku-random-5{top:68px;left:54%;letter-spacing:.1em}</style>
+<style>#event-flyer img{width:100%;height:100%;object-fit:cover}</style>
+</head>
+<style>.danmaku-screen{min-height:auto}.danmaku-track{height:34px!important;display:flex!important;align-items:center;gap:28px;position:static!important;overflow:hidden}.danmaku-item,.danmaku-item:nth-child(n+6){display:inline-block!important;position:static!important;flex:none;animation:none!important;transform:none!important;margin:0!important}.danmaku-random-0,.danmaku-random-1,.danmaku-random-2,.danmaku-random-3,.danmaku-random-4,.danmaku-random-5{letter-spacing:.04em!important}</style>
+<style>.danmaku-item:before{content:none!important}</style>
+<style>.loader{background:radial-gradient(circle at 50% 45%,#101d2a 0,#050608 50%)}.loader-mark{animation:boot-pulse 1s ease-in-out infinite}.boot-log{width:250px;display:grid;gap:4px;text-align:left;color:#92a3be;font:10px Orbitron;letter-spacing:.08em}.boot-log span{opacity:0;animation:boot-line .3s forwards}.boot-log span:nth-child(1){animation-delay:.15s}.boot-log span:nth-child(2){animation-delay:.45s}.boot-log span:nth-child(3){animation-delay:.75s;color:#6bffb0}@keyframes boot-line{to{opacity:1}}@keyframes boot-pulse{50%{box-shadow:0 0 48px rgba(56,245,255,.7);transform:scale(1.04)}}</style>
+<style>.boot-progress-wrap{width:250px;height:16px;display:flex;align-items:center;gap:8px;color:#38f5ff;font:10px Orbitron}.boot-progress-wrap:before{content:"";position:absolute;width:220px;height:2px;background:#253344}.boot-progress-wrap div{position:relative;z-index:1;height:2px;width:0;background:#38f5ff;box-shadow:0 0 10px #38f5ff;transition:width .08s linear}.boot-progress-wrap span{margin-left:228px}</style>
+<style>
+.lp-danmaku{isolation:isolate;position:relative;min-height:168px;overflow:hidden;border:1px solid rgba(56,245,255,.38);background:radial-gradient(ellipse at 52% 95%,#09243a 0%,#070b12 40%,#050608 100%)}.lp-danmaku__haze,.lp-danmaku__beam{position:absolute;pointer-events:none;z-index:-1}.lp-danmaku__haze{inset:auto -12% -34%;height:70%;background:radial-gradient(ellipse at 25% 100%,rgba(56,245,255,.25),transparent 43%),radial-gradient(ellipse at 74% 100%,rgba(255,78,219,.14),transparent 44%);filter:blur(18px);animation:lpHaze 12s ease-in-out infinite alternate}.lp-danmaku__beam{bottom:-38%;width:30%;height:75%;background:linear-gradient(to top,rgba(56,245,255,.55),transparent 70%);filter:blur(8px);clip-path:polygon(43% 100%,57% 100%,100% 0,0 0);opacity:.48;animation:lpBeam 8s ease-in-out infinite alternate}.lp-danmaku__beam--one{left:11%}.lp-danmaku__beam--two{right:10%;animation-delay:-4s}.lp-danmaku__header{position:absolute;inset:0 0 auto;z-index:2;display:flex;justify-content:space-between;padding:9px 13px;border-bottom:1px solid rgba(56,245,255,.25);color:#38f5ff;background:rgba(5,6,8,.62);font:600 9px Orbitron,Inter,sans-serif;letter-spacing:.13em}.lp-danmaku__stage{position:absolute;inset:31px 0 30px;overflow:hidden}.lp-danmaku__comment{position:absolute;left:105%;white-space:nowrap;font:600 14px Orbitron,Inter,sans-serif;animation:lpDanmaku 14s linear forwards;text-shadow:0 0 10px currentColor}.lp-danmaku__comment--cyan{color:#5af7ff}.lp-danmaku__comment--magenta{color:#ff71dc}.lp-danmaku__comment--white{color:#f5f8fc}.lp-danmaku__signal{position:absolute;inset:auto 0 0;display:grid;grid-template-columns:128px 1fr;align-items:center;gap:10px;height:30px;padding:0 13px;border-top:1px solid rgba(56,245,255,.24);color:#38f5ff;background:rgba(5,6,8,.64);font:600 8px Orbitron,Inter,sans-serif;letter-spacing:.11em}.lp-danmaku__signal i{height:14px;background:repeating-linear-gradient(90deg,transparent 0 5px,#38f5ff 5px 7px,transparent 7px 12px),linear-gradient(90deg,transparent 0 3%,#38f5ff 3% 3.8%,transparent 3.8% 7%,#ff4edb 7% 7.8%,transparent 7.8% 12%,#38f5ff 12% 13%,transparent 13% 19%,#ff4edb 19% 20%,transparent 20% 100%);opacity:.76;animation:lpSignal 1.4s steps(2) infinite}@keyframes lpDanmaku{from{transform:translateX(0);opacity:0}5%{opacity:1}to{transform:translateX(-145vw);opacity:1}}@keyframes lpHaze{to{transform:translateX(6%) scale(1.12)}}@keyframes lpBeam{to{transform:rotate(5deg) scaleX(1.25);opacity:.68}}@keyframes lpSignal{50%{filter:brightness(1.8);transform:scaleY(1.3)}}@media(prefers-reduced-motion:reduce){.lp-danmaku__haze,.lp-danmaku__beam,.lp-danmaku__signal i{animation:none}.lp-danmaku__comment{animation-duration:14s!important}}
+</style>
+<style>
+.site-header{position:sticky}.guest-welcome{position:absolute;left:50%;transform:translateX(-50%);margin:0;color:#38f5ff;font:600 10px Orbitron,Inter,sans-serif;letter-spacing:.1em;white-space:nowrap}.lp-danmaku-compose{display:grid;gap:12px;margin-top:12px;padding:16px;border:1px solid rgba(146,163,190,.26);background:rgba(12,17,27,.72)}.lp-danmaku-compose__identity{padding-bottom:14px;border-bottom:1px solid rgba(146,163,190,.2)}.lp-danmaku-compose__identity .eyebrow{margin-bottom:4px}.lp-danmaku-compose__identity strong{font:600 16px Orbitron,Inter,sans-serif;color:#38f5ff}.lp-danmaku-compose__identity p{margin:6px 0 10px;color:#92a3be;font-size:12px}.lp-danmaku-compose__edit,.lp-danmaku-compose__name-form button,.lp-danmaku-compose__form button{min-height:36px;padding:7px 11px;border:1px solid #38f5ff;background:transparent;color:#38f5ff;font:600 10px Orbitron,Inter,sans-serif;letter-spacing:.08em}.lp-danmaku-compose__edit[disabled]{border-color:#47515d;color:#92a3be;cursor:default}.lp-danmaku-compose__name-form{display:flex;gap:8px;margin-top:10px;align-items:end}.lp-danmaku-compose__name-form label{flex:1;color:#92a3be;font-size:11px}.lp-danmaku-compose__name-form input,.lp-danmaku-compose__form textarea{width:100%;margin-top:4px;padding:9px;border:1px solid rgba(146,163,190,.42);background:#050608;color:#f5f8fc;font:14px Inter,"Noto Sans JP",sans-serif}.lp-danmaku-compose__form{display:grid;gap:8px}.lp-danmaku-compose__form label{display:flex;justify-content:space-between;font:600 11px Orbitron,Inter,sans-serif;color:#f5f8fc;letter-spacing:.08em}.lp-danmaku-compose__form label small,.lp-danmaku-compose__form>div small{color:#92a3be}.lp-danmaku-compose__form>div{display:flex;align-items:center;justify-content:space-between;gap:12px}.lp-danmaku-compose__form button{background:#38f5ff;color:#071014}.lp-danmaku-compose__form output{min-height:18px;color:#6bffb0;font-size:12px}@media(min-width:720px){.lp-danmaku-compose{grid-template-columns:1fr 1.2fr;align-items:start}.lp-danmaku-compose__identity{padding:0 18px 0 0;border:0;border-right:1px solid rgba(146,163,190,.2)}.lp-danmaku-compose__form{padding-left:6px}}@media(max-width:600px){.guest-welcome{font-size:8px}.site-header .header-tagline{display:none}.lp-danmaku-compose__name-form{display:grid;align-items:stretch}.lp-danmaku-compose__name-form button{width:100%}}
+</style>
+<style>.lp-danmaku-compose__identity .lp-danmaku-compose__event{color:#f5f8fc;line-height:1.55}.lp-danmaku-compose__event strong{display:inline;color:#38f5ff;font:600 12px Orbitron,Inter,sans-serif}</style>
+<style>.lp-danmaku__stage{z-index:2}.lp-danmaku__watermark{position:absolute;z-index:1;left:50%;top:50%;transform:translate(-50%,-50%);color:rgba(245,248,252,.1);font:700 clamp(34px,10vw,74px)/1 Orbitron,Inter,sans-serif;letter-spacing:.18em;pointer-events:none;user-select:none}.lp-danmaku-note{margin:9px 0 0;color:#92a3be;font-size:12px}.profile-coming-soon{position:relative;min-height:158px;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(56,245,255,.22);background:radial-gradient(circle at 50% 50%,rgba(56,245,255,.11),transparent 65%),#080c14}.profile-coming-soon:before{content:"COMING SOON";position:absolute;color:rgba(245,248,252,.11);font:700 clamp(28px,8vw,54px)/1 Orbitron,Inter,sans-serif;letter-spacing:.12em;white-space:nowrap}.profile-coming-soon span{position:relative;color:#38f5ff;font:600 10px Orbitron,Inter,sans-serif;letter-spacing:.15em}</style>
+<style>.lp-danmaku-compose__title{font-size:14px!important;letter-spacing:.12em!important;line-height:1.35}</style>
+<style>.event-artists{margin:0 0 20px;padding:10px 0;border-top:1px solid rgba(146,163,190,.2);font-size:12px;line-height:1.7}.event-artists span{display:block;margin-bottom:3px;color:#38f5ff;font:600 9px Orbitron;letter-spacing:.1em}</style>
+<style>.artist-card{position:relative;isolation:isolate;box-shadow:0 0 10px rgba(56,245,255,.22),inset 0 1px rgba(255,255,255,.58);background-image:linear-gradient(135deg,rgba(255,255,255,.32) 0%,rgba(255,255,255,.08) 28%,transparent 52%,rgba(255,255,255,.16) 76%,transparent 100%)}.artist-card:after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.68) 0%,rgba(255,255,255,.28) 16%,rgba(255,255,255,.06) 28%,transparent 42%,transparent 67%,rgba(255,255,255,.24) 100%)}.artist-card>.artist-image,.artist-card>.artist-card-info{position:relative;z-index:1}</style>
+<style>.admin-logo-image{display:block;max-width:100%;max-height:96px;object-fit:contain}.header-logo .admin-logo-image{max-height:42px}.hero-logo .admin-logo-image{max-height:180px}</style>
+<style>.header-logo .admin-logo-image{width:auto;max-width:180px;max-height:54px}.hero-logo .admin-logo-image{width:100%;max-width:920px;max-height:none;height:auto;object-fit:contain}</style>
+<style>.header-logo .admin-logo-image{max-width:96px;max-height:32px}</style>
+<style>.lp-danmaku-compose{margin-top:48px!important}</style>
+<body>
+<div id="loader" class="loader">
+<div class="loader-mark">LA</div>
+<p>INITIALIZING LIVE SYSTEM</p>
+<div class="boot-log" aria-hidden="true"><span>LA_OS / BOOT SEQUENCE</span><span>CONNECTING LIVE NETWORK</span><span>STATUS : ONLINE</span></div>
+<div class="boot-progress-wrap"><div id="boot-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div><span>0%</span></div>
+</div>
+<header class="site-header" id="top">
+<a id="header-logo" class="header-logo" href="#top">LEGENDARY<br>
+<span>APOCALYPSE</span>
+</a>
+<p class="header-tagline">CONNECT. CREATE. EVOLVE.</p>
+<button class="menu-toggle" aria-label="メニューを開く" aria-expanded="false">
+<span>
+</span>
+<span>
+</span>
+</button>
+<nav class="global-nav">
+<a href="#event">EVENT</a>
+<a href="#artist">ARTIST</a>
+<a href="#danmaku">DANMAKU</a>
+<a href="#laos">LA_OS</a>
+<a href="#contact">CONTACT</a>
+</nav>
+<span class="status status-header">PROJECT STATUS : ONLINE</span>
+</header>
+<main>
+<section id="event" class="hero section">
+<div class="hero-copy">
+<p class="eyebrow">CONNECT. CREATE. EVOLVE.</p>
+<div id="hero-logo" class="hero-logo">
+<img src="assets/legendary-apocalypse-logo-trimmed.png" alt="Legendary Apocalypse">
+</div>
+<h1>最期に向かう、そのすべてをー。</h1>
+</div>
+<article class="event-panel">
+<p class="panel-label">NEXT LIVE / EVENT INFORMATION</p>
+<div id="event-flyer" class="flyer">EVENT FLYER</div>
+<h2 id="event-title">Legendary Apocalypse Vol.14</h2>
+<div class="event-grid">
+<div>
+<span>DATE</span>
+<strong id="event-date">2026.07.19</strong>
+</div>
+<div>
+<span>VENUE</span>
+<strong id="event-venue">TOKYO</strong>
+</div>
+<div>
+<span>OPEN / START</span>
+<strong id="event-time">15:30 / 16:00</strong>
+</div>
+<div>
+<span>TICKET</span>
+<strong id="event-ticket">ADV ¥3,500</strong>
+</div>
+</div>
+<p class="event-artists"><span>ARTISTS</span> DANCHO / AOI / KURO / LUNA / REI / NOVA</p>
+<a id="event-twitcasting-link" class="text-link" href="#" target="_blank" rel="noopener noreferrer" hidden>ツイキャス ↗</a>
+<a id="ticket-link" class="button button-primary" href="#">予約フォーム</a>
+<button id="all-events-button" class="button button-outline">VIEW ALL EVENTS</button>
+</article>
+</section>
+<section id="artist" class="section artist-section">
+<div class="section-heading">
+<p class="eyebrow">LIVE ARTIST NETWORK</p>
+<h2>ARTIST</h2>
+</div>
+<div id="artist-grid" class="artist-grid">
+</div>
+<button id="all-artists-button" class="button button-outline">VIEW ALL ARTISTS</button>
+</section>
+<section id="danmaku" class="section danmaku-section">
+<div class="section-heading">
+<h2>DANMAKU</h2>
+</div>
+<div class="lp-danmaku" aria-label="DANMAKU sample">
+<div class="lp-danmaku__haze" aria-hidden="true"></div>
+<div class="lp-danmaku__beam lp-danmaku__beam--one" aria-hidden="true"></div>
+<div class="lp-danmaku__beam lp-danmaku__beam--two" aria-hidden="true"></div>
+<div class="lp-danmaku__header"><span>LIVE SAMPLE</span><span id="lp-danmaku-monitor-event">SAMPLE EVENT // VOL.00</span></div>
+<span class="lp-danmaku__watermark" aria-hidden="true">SAMPLE</span>
+<div id="lp-danmaku-track" class="lp-danmaku__stage" aria-live="polite"></div>
+<div class="lp-danmaku__signal"><span>AUDIENCE SIGNAL</span><i aria-hidden="true"></i></div>
+<div id="danmaku-track" hidden aria-hidden="true"></div>
+</div>
+<p class="lp-danmaku-note">※送信されたDANMAKUはこの形でライブ会場にお届けされます。</p>
+<div class="lp-danmaku-compose">
+<div class="lp-danmaku-compose__identity">
+<p class="eyebrow lp-danmaku-compose__title">SEND DANMAKU - demo.ver</p>
+<p class="lp-danmaku-compose__event">対象イベント：<strong id="lp-danmaku-event-key">SAMPLE</strong>にDANMAKUを送信できます。</p>
+<strong id="guest-name-display">--</strong>
+</div>
+<form id="lp-danmaku-form" class="lp-danmaku-compose__form">
+<label for="lp-danmaku-comment">DANMAKUを送信 <small id="lp-danmaku-count">0 / 25</small></label>
+<textarea id="lp-danmaku-comment" maxlength="25" rows="2" required placeholder="25文字以内で入力"></textarea>
+<div><small id="lp-danmaku-limit" style="white-space: pre-line;">残り 10 件</small><button type="submit">SEND DANMAKU</button></div>
+<output id="lp-danmaku-status" aria-live="polite"></output>
+</form>
+</div>
+<p class="lead">ライブを、アーティストを、もっと近くに。すべてを繋ぐOS体験。</p>
+<p class="sub-copy">※LA_OSメンバー向け機能となります</p>
+<a id="laos-about-link" class="button button-outline" href="#laos">LA_OS（メンバー機能）とは？</a>
+</section>
+<section id="laos" class="section laos-section">
+<div class="laos-card">
+<button id="laos-trigger" class="laos-trigger" aria-expanded="false">
+<span>
+<small>MEMBERS SYSTEM</small>
+<strong>LA_OS</strong>
+<em>Legendary Apocalypseと共に育っていくメンバーズ機能。</em>
+</span>
+<b>+</b>
+</button>
+<div id="laos-content" class="laos-content" hidden>
+<h3>思い出が蓄積するライブ体験に</h3>
+<ul><li>ライブ予約をもっとスムーズに</li><li>DANMAKUで会場を彩る(表示名設定可)</li><li>推しへメッセージ、質問、感想を届ける</li><li>推しのプロフィールが変化する</li><li>映像アーカイブを楽しむ（会場にてライセンス購入が必要です）</li><li>あなただけの活動データを記録、成長するLA_OS(アップデート開発中)</li></ul>
+<p><strong>参加はこちらから(参加費無料、登録にはメールアドレスが必要です)</strong></p>
+<div class="laos-links"><button id="laos-login-link" class="button button-primary laos-preparing" type="button">LA_OSは準備中です</button><p class="sub-copy">メンバー機能は現在開発中です。公開までしばらくお待ちください。</p></div>
+</div>
+</div>
+</section>
+<section id="contact" class="section contact-section">
+<div class="section-heading">
+<h2>CONTACT</h2>
+</div>
+<div class="contact-note">
+<p>イベントに関するお問い合わせは主催Xアカウントへお願いします。</p>
+<h3>出演希望のアーティストさまへ</h3>
+<p>アーティスト名・活動SNS・動画URL・音源URL・プロンプター使用の有無・その他の活動内容をご記載ください。</p>
+<a class="button button-primary" href="https://x.com/Dancho_RealJP" target="_blank" rel="noopener noreferrer">お問い合わせ（主催Xアカウント）</a>
+</div>
+</section>
+</main>
+<footer>© LEGENDARY APOCALYPSE</footer>
+<button id="top-button" class="top-button">↑<br>TOP</button>
+<div id="modal-root">
+</div>
+<script defer src="app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+<script src="../LA_OS/firebase-config.js"></script>
+<script defer src="../shared/demo-danmaku-event.js"></script>
+<script defer src="firestore-feed.js"></script>
+<script defer src="danmaku.js"></script>
+<script defer src="loader.js"></script>
+<script defer src="laos-link.js"></script>
+<style>.lp-danmaku-compose+.lead{margin-top:56px}.lp-danmaku__comment{animation-duration:22s}</style>
+</body>
+</html>

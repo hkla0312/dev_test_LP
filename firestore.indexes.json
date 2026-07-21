@@ -1,0 +1,31 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "danmakuSubmissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "eventKey", "order": "ASCENDING" },
+        { "fieldPath": "displayStatus", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "danmakuSubmissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "moderationStatus", "order": "ASCENDING" },
+        { "fieldPath": "displayStatus", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "environment", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

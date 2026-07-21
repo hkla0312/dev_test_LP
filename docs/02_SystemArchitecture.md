@@ -20,7 +20,7 @@
 /apps or /src
   /lp
   /admin
-  /member
+  /LA_OS
   /send-signal
   /danmaku-view
   /archive
@@ -36,7 +36,7 @@
 ```text
 lp/
 admin/
-member/
+LA_OS/
 data/
 assets/
 docs/

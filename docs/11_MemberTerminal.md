@@ -13,6 +13,12 @@ Member Terminal is the member home. It should feel like a place to return to, no
 5. SEND SIGNAL / Archive / Settings
 6. Update Log
 
+## Update Log
+
+- Keep this area lightweight and sprint-focused.
+- Use it for short release notes, not a notification center.
+- Update copy in place as the docs pack evolves.
+
 ## Observation Chamber
 
 - Pixel-art tank

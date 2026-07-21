@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        exists(/databases/$(database)/documents/admin/$(request.auth.uid))
+      );
+    }
+    function systemAllowsSignals() {
+      return !exists(/databases/$(database)/documents/settings/system) ||
+        (get(/databases/$(database)/documents/settings/system).data.systemEnabled == true &&
+         get(/databases/$(database)/documents/settings/system).data.signalEnabled == true);
+    }
+    match /settings/{settingId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    match /siteSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /members/{uid} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow update: if isAdmin() || (request.auth != null && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'xId', 'updatedAt'])) || (request.auth != null && request.auth.uid == uid && request.auth.token.email_verified == true && request.resource.data.emailVerified == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emailVerified', 'updatedAt']));
+      allow create: if isAdmin() || (request.auth != null && request.auth.uid == uid && request.resource.data.uid == uid && request.resource.data.environment == 'dev');
+      allow delete: if isAdmin();
+    }
+    match /memberIds/{memberId} {
+      allow create: if isAdmin() || (request.auth != null && request.resource.data.uid == request.auth.uid);
+      allow read, update, delete: if isAdmin();
+    }
+    match /events/{eventId} {
+      allow read: if isAdmin() || (resource.data.lpVisible == true && resource.data.status == 'active' && resource.data.environment == 'prod');
+      allow write: if isAdmin();
+    }
+    match /artists/{artistId} {
+      allow read: if isAdmin() || (resource.data.lpVisible == true && resource.data.environment == 'prod');
+      allow write: if isAdmin();
+    }
+    match /artistSignals/{signalId} {
+      allow create: if request.auth != null && systemAllowsSignals() && request.resource.data.memberUid == request.auth.uid && request.resource.data.signalType in ['song', 'stage', 'character'] && request.resource.data.isDeleted == false && request.resource.data.environment == get(/databases/$(database)/documents/members/$(request.auth.uid)).data.environment;
+      allow read: if isAdmin() || (resource.data.isDeleted == false && resource.data.environment == 'prod');
+      allow update, delete: if isAdmin();
+    }
+    match /danmakuSubmissions/{submissionId} {
+      allow read: if isAdmin() || resource.data.displayStatus == 'approved';
+      allow write: if false;
+    }
+    match /danmakuGuestUsage/{usageId} {
+      allow read, write: if false;
+    }
+    // Temporary public demo feed. Keep this isolated from production DANMAKU.
+    match /demoDanamku/{submissionId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['eventKey', 'eventTitle', 'displayName', 'comment', 'createdAt']) &&
+        request.resource.data.eventKey is string && request.resource.data.eventKey.size() <= 80 &&
+        request.resource.data.eventTitle is string && request.resource.data.eventTitle.size() <= 100 &&
+        request.resource.data.displayName is string && request.resource.data.displayName.size() >= 1 && request.resource.data.displayName.size() <= 12 &&
+        request.resource.data.comment is string && request.resource.data.comment.size() >= 1 && request.resource.data.comment.size() <= 25;
+      allow update, delete: if false;
+    }
+    // LP専用SAMPLE。会場・本番イベントのDANMAKUとは保存先を分離する。
+    match /lpDanmakuSamples/{submissionId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['eventKey', 'eventTitle', 'displayName', 'comment', 'createdAt']) &&
+        request.resource.data.eventKey == 'SAMPLE' &&
+        request.resource.data.eventTitle is string && request.resource.data.eventTitle.size() <= 100 &&
+        request.resource.data.displayName is string && request.resource.data.displayName.size() == 4 &&
+        request.resource.data.comment is string && request.resource.data.comment.size() >= 1 && request.resource.data.comment.size() <= 25;
+      allow update, delete: if false;
+    }
+    match /settings/danmakuView {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /settings/lpDanmakuView {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /settings/danmakuModeration {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    match /{document=**} { allow read, write: if isAdmin(); }
+  }
+}

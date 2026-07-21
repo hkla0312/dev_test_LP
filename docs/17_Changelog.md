@@ -1,5 +1,11 @@
 # Changelog
 
+## DP-1 Phase1
+
+- Synced the existing docs pack in place.
+- Marked DP-1 Phase1 as the current docs-alignment sprint.
+- Added lightweight guidance for Member Terminal update notes.
+
 ## v0.3.0-alpha planned
 
 - Member Terminal prototype

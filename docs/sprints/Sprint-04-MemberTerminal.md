@@ -29,7 +29,7 @@ Build the first HTML/CSS/JS implementation of Member Terminal.
 
 ## Acceptance Criteria
 
-- `member/index.html` opens standalone.
+- `LA_OS/index.html` opens standalone.
 - Mobile layout is primary.
 - Your Signal reload changes displayed past Signal.
 - Archive unlocked item can slide open.

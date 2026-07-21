@@ -70,6 +70,8 @@ LA_OSは単なるイベント告知サイトではなく、ライブ体験を継
 
 ## 8. Current Development State
 
+- DP-1 Phase1: docs pack sync and Member Terminal spec alignment in progress
+
 - v0.2系：LP + Admin Beta完了
 - v0.3系：Member Terminal Alpha開始
 - 次フェーズ：SEND SIGNAL → LIVE DANMAKU → Archive → Firebase統合

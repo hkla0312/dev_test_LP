@@ -1,0 +1,476 @@
+﻿<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="LA_OS Home" />
+    <title>LA_OS / Home</title>
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <div class="ambient-grid" aria-hidden="true"></div>
+    <div class="noise-layer" aria-hidden="true"></div>
+    <div class="auth-loader" id="authLoader" aria-live="polite"><strong>LA_OS</strong><span>INITIALIZING MEMBER TERMINAL...</span><i></i></div>
+
+    <main class="auth-gate" id="authGate">
+      <section class="auth-card">
+        <section class="auth-intro" id="authIntro">
+          <p class="auth-welcome">WELCOME TO LA_OS</p>
+          <p class="dialog-eyebrow">LA_OS MEMBER</p>
+          <h1>ようこそ</h1>
+          <p class="auth-copy">はじめての方は登録へ、すでに会員の方はログインへ進んでください。</p>
+          <div class="auth-intro-actions">
+            <button class="ghost-button" id="auth-show-register" type="button">はじめて</button>
+            <button class="ghost-button" id="auth-show-login" type="button">ログイン</button>
+          </div>
+        </section>
+        <p id="authMessage" class="auth-message" aria-live="polite"></p>
+        <section class="auth-section auth-register-section" id="authRegisterPanel" hidden>
+          <h2>初回登録</h2>
+          <p>名前とメアドを入力して、登録して開始します。</p>
+          <form id="authRegister">
+            <label class="field"><span>名前</span><input name="displayName" autocomplete="nickname" required></label>
+            <label class="field"><span>メアド</span><input name="email" type="email" autocomplete="email" required></label>
+            <button class="ghost-button" type="submit">登録して開始</button>
+          </form>
+        </section>
+        <section class="auth-section auth-login-section" id="authLoginPanel" hidden>
+          <h2>ログイン</h2>
+          <p>会員登録済みのメールアドレスで続けます。</p>
+          <form id="authLogin">
+            <label class="field"><span>メールアドレス</span><input name="email" type="email" autocomplete="email" required></label>
+            <label class="field"><span>パスワード</span><input name="password" type="password" autocomplete="current-password" required></label>
+            <button class="ghost-button" type="submit">ログイン</button>
+          </form>
+        </section>
+        <a class="ghost-button auth-home" href="../LA_LP/index.html">ホームページにもどる</a>
+      </section>
+    </main>
+    <div class="os-shell" hidden>
+      <p class="welcome-line" role="heading" aria-level="2">WELCOME TO LA_OS</p>
+      <header class="system-header" aria-label="LA_OS header">
+        <h1 id="header-identity">DANCHO v0.01</h1>
+        <div class="header-actions">
+          <button class="icon-button header-action" id="logout-button" type="button" aria-label="ログアウト"><span class="icon-glyph" aria-hidden="true">↩️</span><span class="icon-label">ログアウト</span></button>
+          <a class="icon-button header-action" id="open-home" href="#" aria-label="Home">
+            <span class="icon-glyph" aria-hidden="true">匠</span>
+            <span class="icon-label">ホーム</span>
+          </a>
+          <button class="icon-button header-action" id="open-help" type="button" aria-label="Help">
+            <span class="icon-glyph" aria-hidden="true">笶・/span>
+            <span class="icon-label">ヘルプ</span>
+          </button>
+          <button
+            class="icon-button header-action"
+            id="open-settings"
+            type="button"
+            aria-label="User Settings"
+          >
+            <span class="icon-glyph" aria-hidden="true">笞呻ｸ・/span>
+            <span class="icon-label">設定</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="dashboard" aria-label="LA_OS Home">
+        <section class="panel chamber-card" aria-labelledby="chamber-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-code">01</p>
+              <h2 id="chamber-title">チャンバー</h2>
+            </div>
+            <span class="state-label" id="chamber-state">READY</span>
+          </div>
+
+          <div class="aquarium" role="img" aria-label="チャンバー水槽">
+            <div class="water-surface" aria-hidden="true"></div>
+            <div class="light-column" aria-hidden="true"></div>
+            <div class="bubble-field" id="bubble-field" aria-hidden="true"></div>
+            <div class="tank-floor" aria-hidden="true"></div>
+          </div>
+        </section>
+
+        <section class="panel progress-card" aria-labelledby="progress-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-code">02</p>
+              <h2 id="progress-title">シンチョク</h2>
+            </div>
+            <span class="state-label" id="observation-status">SYNC</span>
+          </div>
+
+          <div class="progress-display">
+            <div class="progress-value" aria-live="polite">
+              <strong id="progress-value">38</strong><span>%</span>
+            </div>
+            <p id="progress-note">進捗を表示中。なにか起こるかも。</p>
+          </div>
+
+          <div
+            class="progress-track"
+            id="progress-track"
+            role="progressbar"
+            aria-label="シンチョク"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="38"
+          >
+            <span id="progress-fill"></span>
+          </div>
+
+          <div class="progress-actions">
+            <button class="ghost-button" id="system-update-trigger" type="button" hidden>
+              SYSTEM UPDATE
+            </button>
+          </div>
+
+          <dl class="data-list compact-data">
+            <div>
+              <dt>CYCLE</dt>
+              <dd id="progress-cycle">04</dd>
+            </div>
+            <div>
+              <dt>VERSION</dt>
+              <dd id="progress-version">v0.01</dd>
+            </div>
+            <div>
+              <dt>SYNC</dt>
+              <dd>MOCK</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="panel reserved-card" aria-labelledby="reservation-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-code">03</p>
+              <h2 id="reservation-title">ヨヤクチュウ</h2>
+            </div>
+            <span class="state-label" id="reservation-state">3</span>
+          </div>
+
+          <div class="reservation-body" id="reservation-body">
+            <div class="reservation-carousel" id="reservation-carousel" aria-label="予約中のイベント"></div>
+            <div class="reservation-indicators" id="reservation-indicators" aria-hidden="true"></div>
+            <button class="action-cta" id="open-reservation-details" type="button">
+              予約の確認と変更
+            </button>
+          </div>
+
+          <div class="reservation-empty" id="reservation-empty" hidden>
+            <p>現在予約中のイベントはありません。</p>
+            <button class="action-cta" id="open-reservation-empty" type="button">
+              新規イベント予約            </button>
+          </div>
+        </section>
+
+        <section class="panel live-card" aria-labelledby="live-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-code">04</p>
+              <h2 id="live-title">コクチ</h2>
+            </div>
+            <span class="state-label" id="live-state">SCHEDULED</span>
+          </div>
+
+          <p class="primary-copy" id="live-name">NEXT EVENT #014</p>
+          <dl class="data-list">
+            <div>
+              <dt>START</dt>
+              <dd id="live-start">20:30 JST</dd>
+            </div>
+            <div>
+              <dt>VENUE</dt>
+              <dd id="live-venue">SECTOR HALL 02</dd>
+            </div>
+            <div>
+              <dt>ARTIST</dt>
+              <dd id="live-act">ARTIST 02</dd>
+            </div>
+            <div>
+              <dt>CHANNEL</dt>
+              <dd id="live-channel">LA_TERMINAL</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="panel signal-card" aria-labelledby="signal-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-code">05</p>
+              <h2 id="signal-title">シグナル</h2>
+            </div>
+            <button class="ghost-button tiny" id="reload-signal" type="button">Reload</button>
+          </div>
+
+          <blockquote id="signal-message"></blockquote>
+          <div class="signal-meta">
+            <span id="signal-target">ARTIST 02</span>
+            <span id="signal-time">2026/04/01 18:00 JST</span>
+          </div>
+        </section>
+
+        <section class="panel danmaku-card" aria-labelledby="danmaku-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-code">06</p>
+              <h2 id="danmaku-title">ミンナノダンマク</h2>
+            </div>
+            <div class="heading-actions">
+              <button class="ghost-button tiny" id="danmaku-help" type="button" aria-label="DANMAKU Help">
+                ?
+              </button>
+              <button class="ghost-button tiny" id="reload-danmaku" type="button">Reload</button>
+            </div>
+          </div>
+
+          <div class="danmaku-highlight">
+            <div class="highlight-ribbon">
+              <span id="danmaku-emote">spark</span>
+              <span id="danmaku-status">APPROVED</span>
+            </div>
+            <blockquote id="danmaku-message"></blockquote>
+            <div class="signal-meta danmaku-meta">
+              <span id="danmaku-meta">#000184 / DANCHO</span>
+            </div>
+          </div>
+
+          <p class="complete-note" id="danmaku-complete" hidden>Today&apos;s Progress Complete</p>
+        </section>
+
+        <section class="panel archive-card" aria-labelledby="archive-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-code">07</p>
+              <h2 id="archive-title">アーカイブ</h2>
+            </div>
+            <button
+              class="archive-plus"
+              id="archive-plus"
+              type="button"
+              aria-label="Toggle archive preview"
+              hidden
+            >
+              +
+            </button>
+          </div>
+
+          <div class="archive-state">
+            <span class="archive-icon" aria-hidden="true"></span>
+            <div class="archive-copy">
+              <p id="archive-state-title">ARCHIVE UNLOCKED</p>
+              <span id="archive-state-note">注釈：会場でのライセンス購入が必要です。</span>
+            </div>
+          </div>
+
+          <div class="archive-expand" id="archive-expand" aria-hidden="true">
+            <div class="archive-video-frame" id="archive-video-frame">
+              <span>VIDEO EMBED</span>
+              <strong id="archive-video-title">ARCHIVE CUT 01 / 03:14</strong>
+            </div>
+          </div>
+
+          <ul class="archive-list" id="archive-list"></ul>
+        </section>
+      </main>
+
+      <p class="system-toast" id="system-toast" aria-live="polite"></p>
+
+      <footer class="system-footer" aria-label="Bottom navigation">
+        <nav class="bottom-nav" id="bottom-nav" aria-label="Main navigation"></nav>
+      </footer>
+    </div>
+
+    <dialog class="os-dialog help-dialog" id="help-dialog" aria-labelledby="help-title">
+      <div class="dialog-shell">
+        <p class="dialog-eyebrow">HELP</p>
+        <h3 id="help-title">ヘルプ</h3>
+        <div class="help-list" id="help-list"></div>
+        <div class="dialog-actions">
+          <button class="ghost-button" id="help-close" type="button">閉じる</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="os-dialog update-dialog" id="system-update-dialog" aria-labelledby="update-dialog-title">
+      <div class="dialog-shell">
+        <p class="dialog-eyebrow">SYSTEM UPDATE</p>
+        <h3 id="update-dialog-title">Installing</h3>
+        <p id="update-dialog-note">Preparing local shell resources.</p>
+        <div class="dialog-track" aria-hidden="true">
+          <span id="update-dialog-fill"></span>
+        </div>
+        <ul class="dialog-stage-list" id="update-dialog-stages">
+          <li data-stage="SYSTEM UPDATE">SYSTEM UPDATE</li>
+          <li data-stage="Installing">Installing</li>
+          <li data-stage="Rebooting">Rebooting</li>
+          <li data-stage="Complete">Complete</li>
+        </ul>
+        <div class="dialog-actions">
+          <button class="ghost-button" id="close-update-dialog" type="button" hidden>閉じる</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="os-dialog" id="reservation-detail-dialog" aria-labelledby="reservation-detail-title">
+      <div class="dialog-shell">
+        <p class="dialog-eyebrow">予約詳細</p>
+        <h3 id="reservation-detail-title">予約の確認と変更</h3>
+        <div class="reservation-detail-list" id="reservation-detail-list"></div>
+        <div class="dialog-actions">
+          <button class="ghost-button" id="reservation-detail-close" type="button">閉じる</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="os-dialog" id="reservation-form-dialog" aria-labelledby="reservation-form-title">
+      <form class="dialog-shell form-shell" id="reservation-form">
+        <p class="dialog-eyebrow">新規イベント予約/p>
+        <h3 id="reservation-form-title">予約の確認と変更</h3>
+        <p class="dialog-copy">公演日、アーティスト、枚数を選んでください。</p>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>公演日</span>
+            <select id="reservation-event-select" required></select>
+          </label>
+          <label class="field">
+            <span>アーティスト</span>
+            <select id="reservation-act-select" required></select>
+          </label>
+          <label class="field">
+            <span>枚数</span>
+            <input id="reservation-count-input" type="number" min="1" step="1" value="1" required />
+          </label>
+        </div>
+
+        <div class="summary-box" id="reservation-summary"></div>
+        <div class="dialog-actions">
+          <button class="ghost-button" id="reservation-form-submit" type="submit">保存する</button>
+          <button class="ghost-button" id="reservation-form-close" type="button">閉じる</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="os-dialog" id="reservation-overwrite-dialog" aria-labelledby="reservation-overwrite-title">
+      <div class="dialog-shell">
+        <p class="dialog-eyebrow">予約内容</p>
+        <h3 id="reservation-overwrite-title">同じイベントに予約があります</h3>
+        <p class="dialog-copy">同じイベントに予約があります。変更しますか？</p>
+        <div class="dialog-actions">
+          <button class="ghost-button" id="reservation-overwrite-confirm" type="button">変更する</button>
+          <button class="ghost-button" id="reservation-overwrite-back" type="button">戻る</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="os-dialog" id="reservation-cancel-dialog" aria-labelledby="reservation-cancel-title">
+      <div class="dialog-shell">
+        <p class="dialog-eyebrow">キャンセル確認</p>
+        <h3 id="reservation-cancel-title">予約をキャンセルしますか？</h3>
+        <div class="dialog-actions">
+          <button class="ghost-button" id="reservation-cancel-confirm" type="button">キャンセルする</button>
+          <button class="ghost-button" id="reservation-cancel-back" type="button">戻る</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="os-dialog" id="signal-dialog" aria-labelledby="signal-title-dialog">
+      <form class="dialog-shell form-shell" id="signal-form">
+        <p class="dialog-eyebrow">SEND SIGNAL</p>
+        <h3 id="signal-title-dialog">SIGNAL</h3>
+        <p class="dialog-copy">アーティストへ届けるメッセージのモックです。</p>
+        <label class="field">
+          <span>アーティスト</span>
+          <select id="signal-artist-select" required></select>
+        </label>
+        <label class="field">
+          <span>カンジョウ</span>
+          <select id="signal-emotion-select" required></select>
+        </label>
+        <label class="field">
+          <span>コメント<small id="signal-counter">0 / 15</small></span>
+          <textarea id="signal-comment" maxlength="15" rows="3"></textarea>
+        </label>
+
+        <div class="dialog-actions">
+          <button class="ghost-button" type="submit">送信する</button>
+          <button class="ghost-button" id="signal-close" type="button">閉じる</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="os-dialog" id="danmaku-dialog" aria-labelledby="danmaku-title-dialog">
+      <form class="dialog-shell form-shell" id="danmaku-form">
+        <p class="dialog-eyebrow">SEND DANMAKU</p>
+        <h3 id="danmaku-title-dialog">DANMAKU</h3>
+        <p class="dialog-copy">管理承認後にDANMAKUとして表示されます。送信者はMember IDで扱われます。</p>
+
+        <div class="summary-box">Sender: <span id="danmaku-sender-id">#000184</span></div>
+        <label class="field">
+          <span>エモート</span>
+          <select id="danmaku-emote-select" required></select>
+        </label>
+        <label class="field">
+          <span>コメント<small id="danmaku-input-counter">0 / 30</small></span>
+          <textarea id="danmaku-comment" maxlength="30" rows="3" required></textarea>
+        </label>
+
+        <div class="dialog-actions">
+          <button class="ghost-button" type="submit">送信する</button>
+          <button class="ghost-button" id="danmaku-close" type="button">閉じる</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="os-dialog" id="settings-dialog" aria-labelledby="settings-title">
+      <form class="dialog-shell form-shell" id="settings-form">
+        <p class="dialog-eyebrow">USER SETTINGS</p>
+        <h3 id="settings-title">User Settings</h3>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Display Name</span>
+            <input id="settings-display-name" type="text" autocomplete="nickname" />
+            <small>予約の際、弾幕送信時に使用されます。</small>
+          </label>
+          <label class="field">
+            <span>X Account</span>
+            <input id="settings-x-account" type="text" autocomplete="username" />
+          </label>
+          <label class="field">
+            <span>E-mail</span>
+            <input id="settings-email" type="email" autocomplete="email" />
+          </label>
+          <label class="field">
+            <span>Password変更</span>
+            <input id="settings-password" type="password" autocomplete="new-password" />
+          </label>
+          <div class="field readonly-field">
+            <span>Member ID</span>
+            <strong id="settings-member-id">#000184</strong>
+            <small>会員登録時に自動で割り振られ、投稿や表示の呼び出しに使われます。</small>
+          </div>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="ghost-button" type="submit">保存する</button>
+          <button class="ghost-button" id="settings-close" type="button">閉じる</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="./firebase-config.js"></script>
+    <script src="./assets/app.js" defer></script>
+    <script src="./assets/auth.js" defer></script>
+    <script src="./assets/firebase-core.js" defer></script>
+  </body>
+</html>
+
+
+
+

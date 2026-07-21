@@ -1,0 +1,10 @@
+{
+  "functions": [{ "source": "functions", "codebase": "default" }],
+  "firestore": {
+    "rules": "LA_Admin/LegendaryApocalypse_Admin_v1.0/firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "LA_Admin/LegendaryApocalypse_Admin_v1.0/storage.rules"
+  }
+}

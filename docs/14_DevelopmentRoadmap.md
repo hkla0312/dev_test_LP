@@ -1,5 +1,13 @@
 # Development Roadmap
 
+## Current Sprint
+
+DP-1 Phase1 is the active docs-sync pass for the LA_OS docs pack.
+
+- Reconcile Member Terminal language across spec files
+- Keep roadmap, changelog, and decision log aligned
+- Avoid creating new pack files unless a new product artifact is required
+
 ## Version Roadmap
 
 ```text
