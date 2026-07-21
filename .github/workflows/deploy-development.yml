@@ -1,0 +1,36 @@
+name: Deploy LP to development server
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'LA_LP/**'
+      - '.github/workflows/deploy-development.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: development-lp-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Upload LP files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Upload to development server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./LA_LP/
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          protocol: ftps
+          dangerous-clean-slate: false
