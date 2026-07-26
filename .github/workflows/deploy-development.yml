@@ -24,23 +24,25 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Install FTP client
-        run: sudo apt-get update && sudo apt-get install --yes lftp
+      - name: Install WebDAV client
+        run: sudo apt-get update && sudo apt-get install --yes rclone
 
       - name: Upload to development server
         env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_SERVER_DIR: ${{ secrets.FTP_SERVER_DIR }}
+          WEBDAV_URL: ${{ secrets.WEBDAV_URL }}
         run: |
-          lftp --user "$FTP_USERNAME" --password "$FTP_PASSWORD" "ftps://$FTP_SERVER" <<LFTP
-          set ftp:passive-mode true
-          set ftp:ssl-force true
-          set ftp:ssl-protect-data true
-          set ssl:verify-certificate no
-          set net:timeout 60
-          set net:max-retries 2
-          mirror --reverse --only-newer --verbose --no-perms --parallel=1 LA_LP/ "$FTP_SERVER_DIR"
-          bye
-          LFTP
+          rclone config create lolipop-webdav webdav \
+            url "$WEBDAV_URL" \
+            vendor other \
+            user "$FTP_USERNAME" \
+            pass "$(rclone obscure "$FTP_PASSWORD")"
+          rclone copy LA_LP/ "lolipop-webdav:$FTP_SERVER_DIR" \
+            --transfers 1 \
+            --checkers 1 \
+            --retries 2 \
+            --low-level-retries 2 \
+            --create-empty-src-dirs \
+            --verbose
