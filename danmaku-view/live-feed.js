@@ -25,16 +25,20 @@
     savedComments.clear();
     window.setDanmakuLiveMode?.();
     window.setDanmakuLoading?.(true);
-    unsubscribe = db.collection("demoDanamku").orderBy("createdAt", "asc").onSnapshot(snapshot => {
-      const docs = snapshot.docChanges().filter(change => change.type === "added" && change.doc.data().eventKey === event.eventKey);
-      docs.forEach(change => {
-        const doc = change.doc;
-        const data = doc.data();
-        const message = `#${data.displayName}: ${data.comment}`;
-        savedComments.set(doc.id, message);
-        queue.push(message);
-      });
-      if (savedComments.size) window.setDanmakuLoading?.(false);
-    }, () => window.setDanmakuLoading?.(true));
+    unsubscribe = db.collection("danmakuSubmissions")
+      .where("displayStatus", "==", "approved")
+      .onSnapshot(snapshot => {
+        const docs = snapshot.docChanges().filter(change => change.type === "added" && change.doc.data().eventKey === event.eventKey);
+        docs.forEach(change => {
+          const doc = change.doc;
+          const data = doc.data();
+          const sender = data.senderLabel || data.memberDisplayName || data.memberId || "ANON";
+          const emote = data.emote ? `${data.emote} ` : "";
+          const message = `${emote}${sender}: ${data.comment}`;
+          savedComments.set(doc.id, message);
+          queue.push(message);
+        });
+        if (savedComments.size) window.setDanmakuLoading?.(false);
+      }, () => window.setDanmakuLoading?.(true));
   });
 })();

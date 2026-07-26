@@ -488,6 +488,68 @@
     return createProfilePayload(member, fallbackProfile);
   };
 
+  const formatMemberAuthError = (error, actionLabel) => {
+    const code = String(error?.code || '');
+    const fallback = String(error?.message || '不明なエラー');
+    const map = {
+      'auth/email-already-in-use': 'このメールアドレスはすでに使用されています。',
+      'auth/invalid-email': 'メールアドレスの形式を確認してください。',
+      'auth/weak-password': 'パスワードの条件を満たしてください。',
+      'auth/user-not-found': '該当する会員情報が見つかりません。',
+      'auth/wrong-password': 'メールアドレスまたはパスワードが違います。',
+      'auth/too-many-requests': '試行回数が多すぎます。少し時間をおいてください。',
+      'auth/network-request-failed': 'ネットワーク接続に失敗しました。',
+      'auth/operation-not-allowed': 'この認証方法は利用できません。',
+      'permission-denied': '保存権限がありません。',
+      'unavailable': 'サービスが一時的に利用できません。',
+      'failed-precondition': '必要な準備がまだ完了していません。',
+      'member-record-not-ready': '会員データの準備がまだ完了していません。少し待ってからもう一度お試しください。',
+    };
+
+    const reason = map[code] || fallback;
+    return `${actionLabel}に失敗しました。${reason}${code ? `（${code}）` : ''}`;
+  };
+
+  const waitForMemberRecord = async (user, fallbackProfile = {}, timeoutMs = 10000) => {
+    if (!user) {
+      return createProfilePayload(null, fallbackProfile);
+    }
+
+    if (authInstance?.__isLocalAuth || typeof firebase === 'undefined' || !firebase.firestore) {
+      return ensureMemberRecord(user, fallbackProfile);
+    }
+
+    await primeAuthToken(user);
+    const db = firebase.firestore();
+    const ref = db.collection('members').doc(user.uid);
+    const deadline = Date.now() + Math.max(2000, Number(timeoutMs) || 0);
+    let lastError = null;
+
+    while (Date.now() < deadline) {
+      try {
+        const snapshot = await ref.get();
+        if (snapshot.exists) {
+          return createProfilePayload(snapshot.data(), fallbackProfile);
+        }
+      } catch (error) {
+        lastError = error;
+        if (String(error?.code || '') === 'permission-denied') {
+          break;
+        }
+      }
+
+      await pause(700);
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
+
+    const error = new Error('Member record is not ready yet.');
+    error.code = 'member-record-not-ready';
+    throw error;
+  };
+
   const isEmailActuallyInUse = async (email) => {
     if (!authInstance || typeof authInstance.fetchSignInMethodsForEmail !== 'function') {
       return null;
@@ -606,12 +668,28 @@
         persistSession(profile, password);
         redirectToMember();
       } catch (firestoreError) {
+        if (String(firestoreError?.code || '') === 'permission-denied') {
+          try {
+            const profile = await waitForMemberRecord(result.user, fallbackProfile);
+            persistSession(profile, password);
+            redirectToMember();
+            return;
+          } catch (waitError) {
+            try {
+              await authInstance.signOut();
+            } catch {
+              // ignore
+            }
+            setMessage(formatMemberAuthError(waitError, '登録'));
+            return;
+          }
+        }
         try {
           await result.user.delete();
         } catch {
           // ignore rollback failure
         }
-        setMessage(describeAuthError(firestoreError, '登録'));
+        setMessage(formatMemberAuthError(firestoreError, '登録'));
       }
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
@@ -631,7 +709,7 @@
         }
       }
 
-      setMessage(describeAuthError(error, '登録'));
+      setMessage(formatMemberAuthError(error, '登録'));
     }
   }
 
@@ -659,7 +737,7 @@
       const credential = await authInstance.signInWithEmailAndPassword(email, password);
       await primeAuthToken(credential.user);
       try {
-        const profile = await ensureMemberRecord(credential.user, loadProfile() || {});
+        const profile = await waitForMemberRecord(credential.user, loadProfile() || {});
         persistSession(profile, password);
         redirectToMember();
       } catch (profileError) {
@@ -668,10 +746,10 @@
         } catch {
           // ignore
         }
-        setMessage(describeAuthError(profileError, 'ログイン'));
+        setMessage(formatMemberAuthError(profileError, 'ログイン'));
       }
     } catch (error) {
-      setMessage(describeAuthError(error, 'ログイン'));
+      setMessage(formatMemberAuthError(error, 'ログイン'));
     }
   }
 

@@ -18,6 +18,7 @@
     settings: { signalEnabled: true, systemEnabled: true }, unsubscribers: []
   };
   const ACTIONS = ['EVENT_CREATE','EVENT_UPDATE','EVENT_ARCHIVE','EVENT_RESTORE','EVENT_DELETE','ARTIST_CREATE','ARTIST_UPDATE','ARTIST_DELETE','MEMBER_DELETE','PROGRESS_ADD','LICENSE_CHANGE','SIGNAL_DELETE','SIGNAL_RESTORE'];
+  state.filters = { eventSearch:'', eventStatus:'all', artistSearch:'', artistRole:'all', memberSearch:'', memberStatus:'active' };
 
   function toast(message, isError = false) {
     const node = document.createElement('div'); node.className = 'toast'; node.textContent = message;
@@ -34,12 +35,14 @@
   }
   function setBanner(message) { const node = $('#firebaseBanner'); node.textContent = message; node.hidden = !message; }
   function modal(title, html, submit, submitLabel = '保存') {
-    $('#modalRoot').innerHTML = `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><header class="modal-head"><h2 id="modalTitle">${escapeHtml(title)}</h2><button class="text-button modal-close" aria-label="閉じる">×</button></header><div class="modal-body">${html}</div><footer class="modal-footer"><button class="secondary modal-cancel">キャンセル</button><button class="primary modal-submit">${escapeHtml(submitLabel)}</button></footer></section></div>`;
+    $('#modalRoot').innerHTML = `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><header class="modal-head"><h2 id="modalTitle">${escapeHtml(title)}</h2><button class="text-button modal-close" aria-label="閉じる">×</button></header><div class="modal-body">${html}</div><p id="modalSaveState" class="save-state" hidden>未保存の変更があります。</p><footer class="modal-footer"><button class="secondary modal-cancel">キャンセル</button><button class="primary modal-submit">${escapeHtml(submitLabel)}</button></footer></section></div>`;
     const close = () => { $('#modalRoot').innerHTML = ''; };
     $('.modal-close').onclick = close; $('.modal-cancel').onclick = close;
     $('.modal-backdrop').onclick = event => { if (event.target === event.currentTarget) close(); };
+    const form = $('.modal-body form');
+    if (form) $$('.modal-body input, .modal-body textarea, .modal-body select').forEach(field => field.addEventListener('input', () => { $('#modalSaveState').hidden = false; }, { once:false }));
     $('.modal-submit').onclick = async () => {
-      if (state.busy) return; state.busy = true; $('.modal-submit').disabled = true;
+      if (state.busy) return; state.busy = true; $('.modal-submit').disabled = true; $('.modal-submit').textContent = '保存中…';
       try { await submit(); close(); } catch (error) { toast(errorMessage(error, title), true); $('.modal-submit').disabled = false; }
       finally { state.busy = false; }
     };
@@ -106,6 +109,30 @@
     return pageHead('CHANGE LOG', '主要な操作履歴（読み取り専用）') + `<section class="card"><div class="form-grid"><label class="field">操作種別<select id="logAction"><option value="">すべて</option>${actions.map(action => `<option>${escapeHtml(action)}</option>`).join('')}</select></label><label class="field">対象検索<input id="logSearch" placeholder="対象名で検索"></label><label class="field">開始日<input id="logFrom" type="date"></label><label class="field">終了日<input id="logTo" type="date"></label></div></section><section class="card"><div id="logTable">${renderLogs()}</div></section>`;
   }
   function renderLogs() { return table([...state.data.adminLogs].sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt))), ['日時','管理者','操作','対象','詳細'], log => `<tr><td>${timestampText(log.createdAt)}</td><td>${escapeHtml(log.adminDisplayName)}</td><td>${escapeHtml(log.actionType)}</td><td>${escapeHtml(log.targetLabel)}</td><td>${escapeHtml(log.detail)}</td></tr>`); }
+  function actionMenu(content) { return `<details class="action-menu"><summary>操作</summary><div class="action-menu-body">${content}</div></details>`; }
+  function filterText(item, keys, query) { return !query || keys.some(key => String(item[key] || '').toLowerCase().includes(query.toLowerCase())); }
+  function eventPage() {
+    const filter = state.filters;
+    const matches = event => filterText(event, ['title','venue','eventDate'], filter.eventSearch) && (filter.eventStatus === 'all' || (filter.eventStatus === 'published' ? event.environment === 'prod' && event.lpVisible : event.environment !== 'prod' || !event.lpVisible));
+    const active = state.data.events.filter(event => event.status !== 'archived' && matches(event)).sort((a,b) => String(a.eventDate).localeCompare(String(b.eventDate)));
+    const archived = state.data.events.filter(event => event.status === 'archived' && matches(event));
+    const row = event => `<tr><td>${escapeHtml(event.title)}</td><td>${escapeHtml(event.eventDate)}</td><td>${escapeHtml(event.venue)}</td><td>${event.environment === 'prod' && event.lpVisible ? '公開中' : 'DEV / 非公開'}</td><td><button class="primary compact" data-event-edit="${event.id}">編集</button>${actionMenu(`<button class="secondary" data-event-publish="${event.id}">${event.environment === 'prod' ? 'DEVへ戻す' : '本番公開'}</button>${event.status === 'archived' ? `<button class="secondary" data-event-restore="${event.id}">復元</button>` : `<button class="secondary" data-event-archive="${event.id}">アーカイブ</button>`}<button class="danger" data-event-delete="${event.id}">削除</button>`)}</td></tr>`;
+    const filterBar = `<div class="list-filter"><input id="eventSearch" value="${escapeHtml(filter.eventSearch)}" placeholder="タイトル・会場・開催日で検索"><select id="eventStatus"><option value="all">公開状態：すべて</option><option value="published" ${filter.eventStatus === 'published' ? 'selected' : ''}>LP公開中</option><option value="private" ${filter.eventStatus === 'private' ? 'selected' : ''}>DEV / 非公開</option></select><span class="filter-count">${active.length}件</span></div>`;
+    return pageHead('EVENT', 'イベント管理', '<button class="primary" data-action="event-new">新規イベントを追加</button>') + `<section class="card"><h2>開催予定</h2>${filterBar}${table(active, ['タイトル','開催日','会場','LP','操作'], row)}</section><details class="card"><summary>アーカイブ済み（${archived.length}件）</summary>${table(archived, ['タイトル','開催日','会場','LP','操作'], row, 'アーカイブ済みのイベントはありません。')}</details>`;
+  }
+  function artistPage() {
+    const filter = state.filters;
+    const artists = state.data.artists.filter(artist => filterText(artist, ['artistKey','name','genre'], filter.artistSearch) && (filter.artistRole === 'all' || artist.role === filter.artistRole));
+    const row = artist => `<tr><td>${escapeHtml(artist.artistKey || '—')}</td><td>${escapeHtml(artist.name)}</td><td>${escapeHtml(artist.role || 'FRESH')}</td><td>${Number(artist.appearanceCount || 0)}</td><td>${escapeHtml(artist.genre || '—')}</td><td>${artist.environment === 'prod' && artist.lpVisible ? '公開中' : 'DEV / 非公開'}</td><td><button class="primary compact" data-artist-edit="${artist.id}">編集</button>${actionMenu(`<button class="secondary" data-artist-publish="${artist.id}">${artist.environment === 'prod' ? 'DEVへ戻す' : '本番公開'}</button><button class="danger" data-artist-delete="${artist.id}">削除</button>`)}</td></tr>`;
+    return pageHead('ARTIST', 'アーティスト管理', '<button class="primary" data-action="artist-new">新規アーティストを追加</button>') + `<section class="card"><div class="list-filter"><input id="artistSearch" value="${escapeHtml(filter.artistSearch)}" placeholder="名前・キー・ジャンルで検索"><select id="artistRole"><option value="all">ロール：すべて</option>${['REGULAR','CORE','FRESH','ORGANIZER'].map(role => `<option ${filter.artistRole === role ? 'selected' : ''}>${role}</option>`).join('')}</select><span class="filter-count">${artists.length}件</span></div>${table(artists, ['ARTIST KEY','名前','ロール','出演回数','ジャンル','LP','操作'], row)}</section>`;
+  }
+  function memberPage() {
+    const filter = state.filters;
+    const members = state.data.members.filter(member => filterText(member, ['memberId','displayName','email'], filter.memberSearch) && (filter.memberStatus === 'all' || member.accountStatus !== 'deleted'));
+    const row = member => { const version = level(member.progress); return `<tr><td>${escapeHtml(member.memberId)}</td><td>${escapeHtml(member.displayName)}</td><td>${version.label}</td><td>${escapeHtml(member.email)}</td><td>${member.emailVerified ? '認証済み' : '未認証'}</td><td>${Number(member.progress || 0)} pt</td><td>${escapeHtml(member.licenseType || 'NONE')}</td><td>${escapeHtml(member.accountStatus || 'active')}</td><td><button class="primary compact" data-member-select="${member.id}">詳細</button>${member.accountStatus !== 'deleted' ? actionMenu(`<button class="danger" data-member-delete="${member.id}">削除</button>`) : ''}</td></tr>`; };
+    const current = state.selectedMember ? `<section class="card"><h2>選択中：${escapeHtml(state.selectedMember.displayName)}</h2><p>${escapeHtml(state.selectedMember.memberId)} / ${level(state.selectedMember.progress).label} / ${Number(state.selectedMember.progress || 0)} pt</p><label class="field">ライセンス<select id="licenseSelect">${['NONE','STANDARD','PREMIUM'].map(value => `<option ${state.selectedMember.licenseType === value ? 'selected' : ''}>${value}</option>`).join('')}</select></label><button class="primary" data-action="license-save">ライセンスを変更</button></section>` : '';
+    return pageHead('MEMBER', 'メンバー情報はFirebase Authenticationと連携しています。') + `<section class="card"><div class="list-filter"><input id="memberSearch" value="${escapeHtml(filter.memberSearch)}" placeholder="ID・表示名・メールで検索"><select id="memberStatus"><option value="active">有効メンバー</option><option value="all" ${filter.memberStatus === 'all' ? 'selected' : ''}>削除履歴を含む</option></select><span class="filter-count">${members.length}件</span></div>${table(members, ['MEMBER ID','表示名','VERSION','メール','認証','PROGRESS','ライセンス','状態','操作'], row)}</section>${current}`;
+  }
   function render() {
     if (!state.user || !state.view) return;
     const pages = { events: eventPage, artists: artistPage, members: memberPage, progress: progressPage, signals: signalPage, logs: logPage };
@@ -180,12 +207,18 @@
     $('[data-action="progress-id-select"]') && ($('[data-action="progress-id-select"]').onclick = () => { const id = $('#progressMemberId').value.trim().toUpperCase(); const member = state.data.members.find(item => String(item.memberId).toUpperCase() === id); if (!member) { toast('一致するMEMBER IDがありません。', true); return; } state.selectedMember = member; render(); });
     $('#progressMemberList') && ($('#progressMemberList').onchange = event => { state.selectedMember = state.data.members.find(member => member.id === event.target.value) || null; render(); });
     $$('[data-progress-preset]').forEach(button => button.onclick = () => { $('#progressForm').elements.amount.value = button.dataset.progressPreset; });
-    $('#progressForm') && ($('#progressForm').onsubmit = event => { event.preventDefault(); const form = event.currentTarget, amount = Number(form.elements.amount.value), reason = form.elements.reason.value; if (!Number.isInteger(amount) || amount < 1 || !reason) { toast('ポイントと理由を入力してください。', true); return; } const member = state.selectedMember; confirmAction('PROGRESSを付与', `${member.displayName} に ${amount} pt を付与します。`, async () => { const memberRef = state.db.collection('members').doc(member.id), logRef = state.db.collection('progressLogs').doc(), adminRef = state.db.collection('adminLogs').doc(); await state.db.runTransaction(async transaction => { const snap = await transaction.get(memberRef); transaction.update(memberRef, { progress:Number(snap.data().progress || 0) + amount, updatedAt:serverTime() }); transaction.set(logRef, { memberUid:member.id, memberId:member.memberId, amount, reason, grantedBy:state.user.uid, createdAt:serverTime() }); transaction.set(adminRef, { actionType:'PROGRESS_ADD', targetType:'member', targetId:member.id, targetLabel:member.displayName, detail:`+${amount} / ${reason}`, adminUid:state.user.uid, adminDisplayName:state.user.displayName || state.user.email, createdAt:serverTime() }); }); toast('PROGRESSを付与しました。'); }, '付与する'); });
+    $('#progressForm') && ($('#progressForm').onsubmit = event => { event.preventDefault(); const form = event.currentTarget, amount = Number(form.elements.amount.value), reason = form.elements.reason.value; if (!Number.isInteger(amount) || amount < 1 || !reason) { toast('ポイントと理由を入力してください。', true); return; } const member = state.selectedMember, before = Number(member.progress || 0), after = before + amount; confirmAction('PROGRESSを付与', `${member.displayName}（${member.memberId}）へ付与します。現在：${before} pt / ${level(before).label} → 付与後：${after} pt / ${level(after).label}。理由：${reason}`, async () => { const memberRef = state.db.collection('members').doc(member.id), logRef = state.db.collection('progressLogs').doc(), adminRef = state.db.collection('adminLogs').doc(); await state.db.runTransaction(async transaction => { const snap = await transaction.get(memberRef); transaction.update(memberRef, { progress:Number(snap.data().progress || 0) + amount, updatedAt:serverTime() }); transaction.set(logRef, { memberUid:member.id, memberId:member.memberId, amount, reason, grantedBy:state.user.uid, createdAt:serverTime() }); transaction.set(adminRef, { actionType:'PROGRESS_ADD', targetType:'member', targetId:member.id, targetLabel:member.displayName, detail:`+${amount} / ${reason}`, adminUid:state.user.uid, adminDisplayName:state.user.displayName || state.user.email, createdAt:serverTime() }); }); toast('PROGRESSを付与しました。'); }, '付与する'); });
     $('#signalArtist') && ($('#signalArtist').onchange = event => { state.selectedArtist = state.data.artists.find(item => item.id === event.target.value) || null; render(); });
     $('#signalDeletedToggle') && ($('#signalDeletedToggle').onchange = event => { state.showDeletedSignals = event.target.checked; render(); });
     $$('[data-signal-delete]').forEach(button => button.onclick = () => confirmAction('SIGNALを削除', '削除済みとして非表示にします。', async () => { const item = state.data.artistSignals.find(signal => signal.id === button.dataset.signalDelete); await state.db.collection('artistSignals').doc(item.id).update({ isDeleted:true, deletedAt:serverTime(), deletedBy:state.user.uid }); await adminLog('SIGNAL_DELETE','signal',item.id,item.memberDisplayName || item.memberId,'論理削除'); toast('SIGNALを削除しました。'); }, '削除する'));
     $$('[data-signal-restore]').forEach(button => button.onclick = () => confirmAction('SIGNALを復元', '削除状態を解除します。', async () => { const item = state.data.artistSignals.find(signal => signal.id === button.dataset.signalRestore); await state.db.collection('artistSignals').doc(item.id).update({ isDeleted:false, deletedAt:null, deletedBy:null }); await adminLog('SIGNAL_RESTORE','signal',item.id,item.memberDisplayName || item.memberId,'復元'); toast('SIGNALを復元しました。'); }, '復元する'));
     ['logAction','logSearch','logFrom','logTo'].forEach(id => { const node = $(`#${id}`); if (node) node.oninput = filterLogs; });
+    [['eventSearch','eventSearch'],['eventStatus','eventStatus'],['artistSearch','artistSearch'],['artistRole','artistRole'],['memberSearch','memberSearch'],['memberStatus','memberStatus']].forEach(([id, key]) => {
+      const node = $(`#${id}`); if (!node) return;
+      const apply = () => { state.filters[key] = node.value; render(); };
+      node.onchange = apply;
+      if (node.tagName === 'INPUT') node.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); apply(); } };
+    });
   }
   function filterLogs() { const action = $('#logAction').value, search = $('#logSearch').value.toLowerCase(), from = $('#logFrom').value, to = $('#logTo').value; const filtered = state.data.adminLogs.filter(log => { const date = log.createdAt && log.createdAt.toDate ? log.createdAt.toDate().toISOString().slice(0,10) : ''; return (!action || log.actionType === action) && (!search || String(log.targetLabel || '').toLowerCase().includes(search)) && (!from || date >= from) && (!to || date <= to); }); $('#logTable').innerHTML = table(filtered, ['日時','管理者','操作','対象','詳細'], log => `<tr><td>${timestampText(log.createdAt)}</td><td>${escapeHtml(log.adminDisplayName)}</td><td>${escapeHtml(log.actionType)}</td><td>${escapeHtml(log.targetLabel)}</td><td>${escapeHtml(log.detail)}</td></tr>`); }
   async function isAdmin(user) { const [singular, plural] = await Promise.all([state.db.collection('admin').doc(user.uid).get(), state.db.collection('admins').doc(user.uid).get()]); return singular.exists || plural.exists; }
@@ -214,7 +247,7 @@
     refreshSessionTimeout();
   }
   function bindShell() {
-    $$('.nav-item[data-view]').forEach(button => button.onclick = () => { state.view = button.dataset.view; render(); });
+    $$('.nav-item[data-view]').forEach(button => button.onclick = () => { state.view = button.dataset.view; $('.sidebar').classList.remove('open'); render(); });
     ['siteSettingsNav', 'danmakuReviewNav', 'lpDanmakuReviewNav'].forEach(id => {
       const button = $(`#${id}`);
       if (button) button.addEventListener('click', () => { state.view = null; });
@@ -223,7 +256,7 @@
     $('#environmentToggle').onchange = event => { state.environment = event.target.value; localStorage.setItem('la-admin-environment', state.environment); toast(`新規データの環境を ${state.environment.toUpperCase()} に設定しました。`); };
     $('#themeButton').onclick = () => { const dark = document.documentElement.dataset.theme !== 'dark'; document.documentElement.dataset.theme = dark ? 'dark' : 'light'; localStorage.setItem('la-admin-theme', dark ? 'dark' : 'light'); $('#themeButton').textContent = dark ? 'Light' : 'Dark'; };
     $('#logoutButton').onclick = async () => { clearTimeout(sessionTimer); await firebase.auth().signOut(); if (ADMIN_LOGIN_URL) location.assign(ADMIN_LOGIN_URL); };
-    $('#menuButton').onclick = () => $('#appView').classList.toggle('menu-open');
+    $('#menuButton').onclick = () => $('.sidebar').classList.toggle('open');
   }
   async function init() {
     const savedTheme = localStorage.getItem('la-admin-theme'); if (savedTheme === 'dark') { document.documentElement.dataset.theme = 'dark'; $('#themeButton').textContent = 'Light'; }

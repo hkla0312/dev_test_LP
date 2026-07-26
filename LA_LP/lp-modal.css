@@ -92,7 +92,7 @@
 
 .modal .all-list .artist-image {
   display: block;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 3 / 4;
   overflow: hidden;
 }
 
@@ -105,7 +105,7 @@
 .modal .profile-thumbnail {
   display: block;
   width: min(260px, 100%);
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 3 / 4;
   max-height: none;
   object-fit: cover;
 }
@@ -121,6 +121,16 @@
 .artist-card .artist-card-info strong {
   font-size: 16px;
   line-height: 1.25;
+}
+
+/* LPのアーティスト写真は縦長で見せ、焦点位置はAdminデータで上書きできる。 */
+.artist-card .artist-image {
+  aspect-ratio: 3 / 4;
+}
+
+.artist-card .artist-image img,
+.modal .profile-thumbnail {
+  object-position: 50% 32%;
 }
 
 .artist-card .artist-card-info small {

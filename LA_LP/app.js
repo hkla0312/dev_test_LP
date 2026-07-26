@@ -8,6 +8,14 @@ function escapeHTML(value) {
   return String(value || "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 }
 
+function artistImagePosition(artist) {
+  const clamp = (value, fallback) => Math.min(100, Math.max(0, Number.isFinite(Number(value)) ? Number(value) : fallback));
+  const focus = !Array.isArray(artist) ? (artist.imageFocus || artist.focalPoint || {}) : {};
+  const x = clamp(artist?.imageFocusX ?? focus.x, 50);
+  const y = clamp(artist?.imageFocusY ?? focus.y, 32);
+  return `${x}% ${y}%`;
+}
+
 function displayRole(role) {
   return ["REGULAR", "ORGANIZER", "FRESH", "CORE"].includes(role) ? role : "FRESH";
 }
@@ -66,7 +74,7 @@ function close() {
 
 function artistCard(artist, attribute, index) {
   const [name, role] = Array.isArray(artist) ? artist : [artist.name, artist.role];
-  const image = !Array.isArray(artist) && artist.imageUrl ? `<img src="${escapeHTML(artist.imageUrl)}" alt="${escapeHTML(name)}">` : `<span>${escapeHTML(name).slice(0, 2)}</span>`;
+  const image = !Array.isArray(artist) && artist.imageUrl ? `<img src="${escapeHTML(artist.imageUrl)}" alt="${escapeHTML(name)}" style="object-position:${artistImagePosition(artist)}">` : `<span>${escapeHTML(name).slice(0, 2)}</span>`;
   const appearances = !Array.isArray(artist) ? Math.max(0, Number(artist.appearanceCount || 0)) : 0;
   const genre = !Array.isArray(artist) ? String(artist.genre || "") : "";
   const displayRoleName = displayRole(role);
@@ -77,7 +85,7 @@ function artistProfile(artist = {}) {
   const links = [["X", artist.xUrl, "x"], ["YouTube", artist.youtubeUrl, "youtube"], ["SNS", artist.snsUrl1, "sns"], ["SNS", artist.snsUrl2, "sns"]].filter(([, url]) => /^https?:\/\//i.test(url));
   const values = signalAnalytics(artist);
   const comments = signalComments(artist);
-  modal(`<div class="profile-body"><p class="eyebrow">ARTIST PROFILE</p><h2>${escapeHTML(artist.name || "ARTIST")}</h2><p class="profile-role">${escapeHTML(displayRole(artist.role))}${artist.genre ? ` / ${escapeHTML(artist.genre)}` : ""}</p>${artist.imageUrl ? `<img class="profile-thumbnail" src="${escapeHTML(artist.imageUrl)}" alt="${escapeHTML(artist.name)}">` : ""}<h3>APPEARANCES</h3><p class="profile-text">出演回数：${Math.max(0, Number(artist.appearanceCount || 0))} 回</p><h3>PROFILE</h3><p class="profile-text">${escapeHTML(artist.profile || "プロフィール情報は準備中です。")}</p>${links.length ? `<h3>SNS / VIDEO</h3><p class="social-links">${links.map(([label, url, type]) => `<a class="social-link social-link--${type}" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true"></span>${label}</a>`).join("")}</p>` : ""}<section class="artist-signal-panel"><h3>ARTIST SIGNAL</h3><p class="artist-signal-panel__lead">ファンから届いたSIGNALの割合</p><div class="artist-signal-panel__content">${signalGraph(artist, "modal")}<ul class="artist-signal-legend">${SIGNAL_LABELS.map((label, index) => `<li><span>${label}</span><b>${values[index]}%</b></li>`).join("")}</ul></div><p class="artist-signal-panel__note">Based on received SIGNALS</p><div class="comment-chips">${comments.map(comment => `<span class="comment-chip">${escapeHTML(comment)}</span>`).join("")}</div></section><section class="artist-ask-preview"><h3>ASK / QUESTION</h3><p>COMING SOON</p></section></div>`);
+  modal(`<div class="profile-body"><p class="eyebrow">ARTIST PROFILE</p><h2>${escapeHTML(artist.name || "ARTIST")}</h2><p class="profile-role">${escapeHTML(displayRole(artist.role))}${artist.genre ? ` / ${escapeHTML(artist.genre)}` : ""}</p>${artist.imageUrl ? `<img class="profile-thumbnail" src="${escapeHTML(artist.imageUrl)}" alt="${escapeHTML(artist.name)}" style="object-position:${artistImagePosition(artist)}">` : ""}<h3>APPEARANCES</h3><p class="profile-text">出演回数：${Math.max(0, Number(artist.appearanceCount || 0))} 回</p><h3>PROFILE</h3><p class="profile-text">${escapeHTML(artist.profile || "プロフィール情報は準備中です。")}</p>${links.length ? `<h3>SNS / VIDEO</h3><p class="social-links">${links.map(([label, url, type]) => `<a class="social-link social-link--${type}" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true"></span>${label}</a>`).join("")}</p>` : ""}<section class="artist-signal-panel"><h3>ARTIST SIGNAL</h3><p class="artist-signal-panel__lead">ファンから届いたSIGNALの割合</p><div class="artist-signal-panel__content">${signalGraph(artist, "modal")}<ul class="artist-signal-legend">${SIGNAL_LABELS.map((label, index) => `<li><span>${label}</span><b>${values[index]}%</b></li>`).join("")}</ul></div><p class="artist-signal-panel__note">Based on received SIGNALS</p><div class="comment-chips">${comments.map(comment => `<span class="comment-chip">${escapeHTML(comment)}</span>`).join("")}</div></section><section class="artist-ask-preview"><h3>ASK / QUESTION</h3><p>COMING SOON</p></section></div>`);
 }
 
 window.openLPArtistProfile = artistProfile;
