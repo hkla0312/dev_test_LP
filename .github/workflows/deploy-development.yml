@@ -42,7 +42,9 @@ jobs:
             vendor other \
             user "$FTP_USERNAME" \
             pass "$(rclone obscure "$FTP_PASSWORD")"
-          remote_dir="lolipop-webdav:${FTP_SERVER_DIR%/}"
+          # Temporary diagnostic deployment: place the applications at the
+          # WebDAV/FTP account root to verify both protocols see the same files.
+          remote_dir="lolipop-webdav:"
           for app_dir in LA_OS LA_LP LA_Admin danmaku-view; do
             rclone copy "$app_dir/" "$remote_dir/$app_dir" \
               --transfers 1 \
