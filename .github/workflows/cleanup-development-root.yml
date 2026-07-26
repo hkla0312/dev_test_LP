@@ -1,0 +1,36 @@
+name: Remove root-level deployment test folders
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/cleanup-development-root.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Remove only the root-level test folders
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install WebDAV client
+        run: sudo apt-get update && sudo apt-get install --yes rclone
+
+      - name: Remove test folders from account root
+        env:
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          WEBDAV_URL: ${{ secrets.WEBDAV_URL }}
+        run: |
+          set -euo pipefail
+          rclone config create lolipop-webdav webdav \
+            url "$WEBDAV_URL" \
+            vendor other \
+            user "$FTP_USERNAME" \
+            pass "$(rclone obscure "$FTP_PASSWORD")"
+
+          for app_dir in LA_OS LA_LP LA_Admin danmaku-view; do
+            rclone purge "lolipop-webdav:$app_dir" --verbose
+          done
