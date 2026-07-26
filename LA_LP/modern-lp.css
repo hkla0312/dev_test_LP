@@ -1,0 +1,425 @@
+/*
+ * LP visual refresh
+ * 既存のコンテンツ・機能を変えず、写真とライブ情報が主役になるように整える。
+ */
+:root {
+  --surface: rgba(12, 17, 27, .78);
+  --surface-strong: rgba(13, 20, 31, .94);
+  --radius: 14px;
+}
+
+body {
+  background-color: #050608;
+  background-image:
+    radial-gradient(circle at 80% 0%, rgba(91, 168, 255, .14), transparent 30rem),
+    radial-gradient(circle at 7% 37%, rgba(157, 112, 255, .08), transparent 27rem),
+    linear-gradient(90deg, transparent 49.9%, rgba(255, 255, 255, .018) 50%, transparent 50.1%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .34;
+  background-image: linear-gradient(rgba(255, 255, 255, .025) 1px, transparent 1px);
+  background-size: 100% 5px;
+  mask-image: linear-gradient(to bottom, #000, transparent 55%);
+}
+
+.site-header {
+  min-height: 76px;
+  border-color: rgba(146, 163, 190, .17);
+  background: rgba(5, 6, 8, .78);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .12);
+}
+
+.header-logo {
+  letter-spacing: .05em;
+}
+
+.global-nav a {
+  position: relative;
+  transition: color .2s ease;
+}
+
+.global-nav a::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -7px;
+  left: 0;
+  height: 1px;
+  background: var(--cyan);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .2s ease;
+}
+
+.global-nav a:hover::after,
+.global-nav a:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.section {
+  position: relative;
+  max-width: 1180px;
+}
+
+.hero {
+  min-height: max(660px, calc(100svh - 76px));
+  gap: clamp(32px, 6vw, 74px);
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 0;
+}
+
+.hero-copy::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: min(66vw, 620px);
+  height: min(66vw, 620px);
+  top: 50%;
+  left: -18%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 245, 255, .11), rgba(56, 245, 255, .025) 33%, transparent 69%);
+  filter: blur(3px);
+  transform: translateY(-50%);
+}
+
+.hero .eyebrow {
+  margin-bottom: 18px;
+  color: #8cf8ff;
+}
+
+.hero-logo {
+  width: min(100%, 670px);
+  filter: drop-shadow(0 0 26px rgba(56, 245, 255, .16));
+}
+
+.hero h1 {
+  max-width: 21em;
+  margin-top: 30px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+.event-panel,
+.contact-note {
+  border-radius: var(--radius);
+  border-color: rgba(146, 163, 190, .3);
+  background: linear-gradient(145deg, rgba(22, 31, 47, .92), rgba(8, 11, 17, .9));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .24), inset 0 1px rgba(255, 255, 255, .08);
+}
+
+.event-panel {
+  overflow: hidden;
+}
+
+.event-panel .panel-label {
+  margin-bottom: 15px;
+}
+
+.event-panel .flyer {
+  margin: 0 -3px 22px;
+  border: 1px solid rgba(146, 163, 190, .25);
+  border-radius: 9px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #122940, #080c14);
+}
+
+.event-panel h2 {
+  font-size: clamp(20px, 2.1vw, 28px);
+  letter-spacing: -.03em;
+}
+
+.event-grid {
+  margin-top: 22px;
+}
+
+.event-grid div {
+  padding: 13px 10px;
+}
+
+.event-grid strong {
+  font-size: 13px;
+}
+
+.event-panel .button {
+  margin-top: 3px;
+}
+
+.button {
+  min-height: 50px;
+  border-radius: 6px;
+  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+
+.button:hover,
+.button:focus-visible {
+  transform: translateY(-2px);
+}
+
+.button-primary {
+  box-shadow: 0 10px 28px rgba(56, 245, 255, .18);
+}
+
+.button-primary:hover,
+.button-primary:focus-visible {
+  box-shadow: 0 13px 34px rgba(56, 245, 255, .32);
+}
+
+.button-outline {
+  border-color: rgba(56, 245, 255, .68);
+  background: rgba(56, 245, 255, .035);
+}
+
+.artist-section {
+  padding-top: 112px;
+}
+
+.section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px 24px;
+  margin-bottom: 36px;
+}
+
+.section-heading .eyebrow {
+  width: 100%;
+  margin: 0;
+}
+
+.section-heading h2 {
+  letter-spacing: -.07em;
+}
+
+.artist-grid {
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.artist-card {
+  min-width: 0;
+  border-radius: 10px;
+  border-color: rgba(224, 239, 255, .34);
+  background-color: #101722;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .25), 0 0 14px rgba(56, 245, 255, .18), inset 0 1px rgba(255, 255, 255, .55);
+  transform: translateZ(0);
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.artist-card:hover,
+.artist-card:focus-visible {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, .38), 0 0 25px rgba(56, 245, 255, .3), inset 0 1px rgba(255, 255, 255, .6);
+}
+
+.artist-card::after {
+  opacity: .9;
+  background: linear-gradient(118deg, rgba(255, 255, 255, .66) 0%, rgba(255, 255, 255, .18) 13%, transparent 35%, transparent 68%, rgba(255, 255, 255, .24) 100%) !important;
+}
+
+.artist-card .artist-image {
+  border-bottom: 1px solid rgba(255, 255, 255, .18);
+  background: #111722;
+}
+
+.artist-card .artist-image img {
+  transition: transform .45s ease;
+}
+
+.artist-card:hover .artist-image img {
+  transform: scale(1.035);
+}
+
+.artist-card-info {
+  min-height: 98px;
+  padding: 14px 13px 15px;
+  background: linear-gradient(180deg, rgba(5, 6, 8, .15), rgba(5, 6, 8, .5));
+}
+
+.artist-card .artist-card-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artist-card-detail {
+  color: rgba(245, 248, 252, .7);
+}
+
+.artist-card.role-organizer {
+  background: linear-gradient(135deg, #07090c 0%, #49535e 38%, #101317 49%, #7d8994 62%, #0b0d10 100%);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .36), inset 0 1px rgba(255, 255, 255, .7), 0 0 15px rgba(214, 221, 230, .22);
+}
+
+.danmaku-section {
+  padding-top: 120px;
+}
+
+.lp-danmaku {
+  min-height: 210px;
+  border-radius: var(--radius);
+  border-color: rgba(56, 245, 255, .5);
+  box-shadow: 0 25px 55px rgba(0, 0, 0, .36), inset 0 1px rgba(255, 255, 255, .08);
+}
+
+.lp-danmaku__header {
+  padding: 11px 15px;
+  background: rgba(5, 6, 8, .76);
+}
+
+.lp-danmaku__stage {
+  inset: 34px 0 33px;
+}
+
+.lp-danmaku__signal {
+  height: 33px;
+  padding: 0 15px;
+}
+
+.lp-danmaku-compose {
+  margin-top: 28px !important;
+  border-radius: var(--radius);
+  border-color: rgba(146, 163, 190, .32);
+  background: linear-gradient(145deg, rgba(15, 24, 36, .88), rgba(7, 9, 13, .9));
+}
+
+.lp-danmaku-compose + .lead {
+  max-width: 38em;
+  margin-top: 64px;
+  font-size: clamp(19px, 2.4vw, 28px);
+  line-height: 1.5;
+}
+
+.laos-section {
+  padding-top: 112px;
+}
+
+.laos-card {
+  border-radius: var(--radius);
+  border-color: rgba(255, 255, 255, .87) !important;
+  background: linear-gradient(135deg, #fbfdff 0%, #dfe8f0 44%, #f8fbfd 100%);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, .28), 0 0 25px rgba(255, 255, 255, .28) !important;
+}
+
+.laos-trigger small,
+.laos-trigger strong,
+.laos-trigger b,
+.laos-content h3 {
+  color: #0c6e7c;
+}
+
+.laos-trigger strong {
+  font-size: clamp(44px, 7vw, 62px) !important;
+  letter-spacing: -.06em;
+}
+
+.laos-trigger em,
+.laos-content p,
+.laos-content ul,
+.laos-content .sub-copy {
+  color: #344554;
+}
+
+.laos-content {
+  border-top: 1px solid rgba(12, 62, 75, .16);
+}
+
+.contact-section {
+  padding-top: 120px;
+  padding-bottom: 120px;
+}
+
+.contact-note {
+  max-width: 700px;
+}
+
+.contact-note h3 {
+  font-size: 17px;
+}
+
+footer {
+  border-color: rgba(146, 163, 190, .17);
+  background: rgba(0, 0, 0, .18);
+}
+
+.top-button {
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .3), 0 0 12px rgba(56, 245, 255, .2);
+}
+
+.modal {
+  border-radius: 14px;
+  border-color: rgba(146, 163, 190, .36);
+  box-shadow: 0 28px 76px rgba(0, 0, 0, .5);
+}
+
+@media (min-width: 720px) {
+  .event-panel {
+    padding: 28px;
+  }
+
+  .artist-grid {
+    gap: 18px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .site-header {
+    padding-inline: max(5vw, calc((100% - 1160px) / 2));
+  }
+
+  .hero {
+    grid-template-columns: minmax(0, 1.14fr) minmax(370px, .86fr);
+  }
+
+  .artist-grid {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 719px) {
+  .section {
+    padding-inline: 20px;
+  }
+
+  .hero {
+    min-height: auto;
+    padding-top: 72px;
+    padding-bottom: 70px;
+  }
+
+  .artist-grid {
+    gap: 10px;
+  }
+
+  .artist-card-info {
+    min-height: 94px;
+    padding: 11px 10px 13px;
+  }
+
+  .artist-card .artist-card-info strong {
+    font-size: 14px;
+  }
+
+  .lp-danmaku {
+    min-height: 190px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .artist-card,
+  .artist-card .artist-image img,
+  .global-nav a::after {
+    transition: none;
+  }
+}
