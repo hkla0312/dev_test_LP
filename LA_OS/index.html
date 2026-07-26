@@ -6,59 +6,23 @@
     <meta name="color-scheme" content="dark" />
     <meta name="description" content="LA_OS Home" />
     <title>LA_OS / Home</title>
-    <link rel="stylesheet" href="./assets/styles.css" />
+    <link rel="stylesheet" href="./assets/styles.css?v=20260726i" />
   </head>
   <body>
     <div class="ambient-grid" aria-hidden="true"></div>
     <div class="noise-layer" aria-hidden="true"></div>
-    <div class="auth-loader" id="authLoader" aria-live="polite"><strong>LA_OS</strong><span>INITIALIZING MEMBER TERMINAL...</span><i></i></div>
-
-    <main class="auth-gate" id="authGate">
-      <section class="auth-card">
-        <section class="auth-intro" id="authIntro">
-          <p class="auth-welcome">WELCOME TO LA_OS</p>
-          <p class="dialog-eyebrow">LA_OS MEMBER</p>
-          <h1>ようこそ</h1>
-          <p class="auth-copy">はじめての方は登録へ、すでに会員の方はログインへ進んでください。</p>
-          <div class="auth-intro-actions">
-            <button class="ghost-button" id="auth-show-register" type="button">はじめて</button>
-            <button class="ghost-button" id="auth-show-login" type="button">ログイン</button>
-          </div>
-        </section>
-        <p id="authMessage" class="auth-message" aria-live="polite"></p>
-        <section class="auth-section auth-register-section" id="authRegisterPanel" hidden>
-          <h2>初回登録</h2>
-          <p>名前とメアドを入力して、登録して開始します。</p>
-          <form id="authRegister">
-            <label class="field"><span>名前</span><input name="displayName" autocomplete="nickname" required></label>
-            <label class="field"><span>メアド</span><input name="email" type="email" autocomplete="email" required></label>
-            <button class="ghost-button" type="submit">登録して開始</button>
-          </form>
-        </section>
-        <section class="auth-section auth-login-section" id="authLoginPanel" hidden>
-          <h2>ログイン</h2>
-          <p>会員登録済みのメールアドレスで続けます。</p>
-          <form id="authLogin">
-            <label class="field"><span>メールアドレス</span><input name="email" type="email" autocomplete="email" required></label>
-            <label class="field"><span>パスワード</span><input name="password" type="password" autocomplete="current-password" required></label>
-            <button class="ghost-button" type="submit">ログイン</button>
-          </form>
-        </section>
-        <a class="ghost-button auth-home" href="../LA_LP/index.html">ホームページにもどる</a>
-      </section>
-    </main>
     <div class="os-shell" hidden>
       <p class="welcome-line" role="heading" aria-level="2">WELCOME TO LA_OS</p>
       <header class="system-header" aria-label="LA_OS header">
         <h1 id="header-identity">DANCHO v0.01</h1>
         <div class="header-actions">
-          <button class="icon-button header-action" id="logout-button" type="button" aria-label="ログアウト"><span class="icon-glyph" aria-hidden="true">↩️</span><span class="icon-label">ログアウト</span></button>
+          <button class="icon-button header-action" id="logout-button" type="button" aria-label="ログアウト"><span class="icon-glyph" aria-hidden="true">🚪</span><span class="icon-label">ログアウト</span></button>
           <a class="icon-button header-action" id="open-home" href="#" aria-label="Home">
-            <span class="icon-glyph" aria-hidden="true">匠</span>
+            <span class="icon-glyph" aria-hidden="true">🏠</span>
             <span class="icon-label">ホーム</span>
           </a>
           <button class="icon-button header-action" id="open-help" type="button" aria-label="Help">
-            <span class="icon-glyph" aria-hidden="true">笶・/span>
+            <span class="icon-glyph" aria-hidden="true">❓</span>
             <span class="icon-label">ヘルプ</span>
           </button>
           <button
@@ -67,7 +31,7 @@
             type="button"
             aria-label="User Settings"
           >
-            <span class="icon-glyph" aria-hidden="true">笞呻ｸ・/span>
+            <span class="icon-glyph" aria-hidden="true">⚙️</span>
             <span class="icon-label">設定</span>
           </button>
         </div>
@@ -380,7 +344,11 @@
       <form class="dialog-shell form-shell" id="signal-form">
         <p class="dialog-eyebrow">SEND SIGNAL</p>
         <h3 id="signal-title-dialog">SIGNAL</h3>
-        <p class="dialog-copy">アーティストへ届けるメッセージのモックです。</p>
+        <p class="dialog-copy">素敵なアーティストには感想を届けましょう！</p>
+        <div class="signal-artist-preview" id="signal-artist-preview" aria-live="polite">
+          <span class="signal-artist-thumb" id="signal-artist-thumb" aria-hidden="true"></span>
+          <strong id="signal-artist-name">ARTIST 02</strong>
+        </div>
         <label class="field">
           <span>アーティスト</span>
           <select id="signal-artist-select" required></select>
@@ -389,13 +357,15 @@
           <span>カンジョウ</span>
           <select id="signal-emotion-select" required></select>
         </label>
+        <div class="summary-box">送信回数: <span id="signal-limit-status">0 / 1</span></div>
+        <p class="counter-note" id="signal-limit-note">本日は1回まで送信できます。</p>
         <label class="field">
           <span>コメント<small id="signal-counter">0 / 15</small></span>
           <textarea id="signal-comment" maxlength="15" rows="3"></textarea>
         </label>
 
         <div class="dialog-actions">
-          <button class="ghost-button" type="submit">送信する</button>
+          <button class="ghost-button" id="signal-submit" type="submit">送信する</button>
           <button class="ghost-button" id="signal-close" type="button">閉じる</button>
         </div>
       </form>
@@ -405,12 +375,30 @@
       <form class="dialog-shell form-shell" id="danmaku-form">
         <p class="dialog-eyebrow">SEND DANMAKU</p>
         <h3 id="danmaku-title-dialog">DANMAKU</h3>
-        <p class="dialog-copy">管理承認後にDANMAKUとして表示されます。送信者はMember IDで扱われます。</p>
+        <p class="dialog-copy">エモートとコメントが会場のスクリーンに反映されます。<br />カラフルな会場づくりに参加してみよう。</p>
 
-        <div class="summary-box">Sender: <span id="danmaku-sender-id">#000184</span></div>
+        <div class="summary-box">対象イベント: <span id="danmaku-event-label">NEXT EVENT #014</span></div>
+        <div class="field sender-mode-field">
+          <span>Senderの表示方法</span>
+          <div class="sender-mode-switch" role="radiogroup" aria-label="Senderの表示方法">
+            <label class="sender-mode-option" for="danmaku-sender-mode-id">
+              <input id="danmaku-sender-mode-id" type="radio" name="danmaku-sender-mode" value="id" checked />
+              <span>ID</span>
+            </label>
+            <label class="sender-mode-option" for="danmaku-sender-mode-display-name">
+              <input id="danmaku-sender-mode-display-name" type="radio" name="danmaku-sender-mode" value="displayName" />
+              <span>表示名</span>
+            </label>
+          </div>
+        </div>
+        <div class="summary-box">Sender: <span id="danmaku-sender-preview">#000184</span></div>
+        <p class="counter-note" id="danmaku-sender-note">IDで送信します。</p>
+        <div class="summary-box">送信回数: <span id="danmaku-quota-status">0 / 5</span></div>
+        <p class="counter-note" id="danmaku-quota-note">1イベントにつき最大5件まで送信できます。</p>
         <label class="field">
           <span>エモート</span>
-          <select id="danmaku-emote-select" required></select>
+          <input id="danmaku-emote-value" type="hidden" name="emote" required />
+          <div class="emoji-palette" id="danmaku-emote-palette" role="radiogroup" aria-label="エモート選択"></div>
         </label>
         <label class="field">
           <span>コメント<small id="danmaku-input-counter">0 / 30</small></span>
@@ -418,7 +406,7 @@
         </label>
 
         <div class="dialog-actions">
-          <button class="ghost-button" type="submit">送信する</button>
+          <button class="ghost-button" id="danmaku-submit" type="submit">送信する</button>
           <button class="ghost-button" id="danmaku-close" type="button">閉じる</button>
         </div>
       </form>
@@ -465,9 +453,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="./firebase-config.js"></script>
-    <script src="./assets/app.js" defer></script>
-    <script src="./assets/auth.js" defer></script>
-    <script src="./assets/firebase-core.js" defer></script>
+    <script src="./assets/auth.js?v=20260726i" defer></script>
+    <script src="./assets/app.js?v=20260726i" defer></script>
+    <script src="./assets/firebase-core.js?v=20260726i" defer></script>
   </body>
 </html>
 

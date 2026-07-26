@@ -30,6 +30,7 @@ window.addEventListener("load", () => {
   const counter = document.querySelector("#lp-danmaku-count");
   const limit = document.querySelector("#lp-danmaku-limit");
   const status = document.querySelector("#lp-danmaku-status");
+  const sendButton = form.querySelector("button[type=submit]");
   let guest = getGuest();
   let activeEvent = null;
   let feedComments = [];
@@ -39,21 +40,39 @@ window.addEventListener("load", () => {
     ? (firebase.apps.length ? firebase.firestore() : (firebase.initializeApp(FIREBASE_CONFIG), firebase.firestore()))
     : null;
   const submissionsForEvent = () => activeEvent ? guest.submissions.filter(item => item.eventKey === activeEvent.eventKey) : [];
+  const remainingForActiveEvent = () => Math.max(0, GUEST_LIMIT - submissionsForEvent().length);
   const collectionForActiveEvent = () => activeEvent?.mode === "sample" ? SAMPLE_COLLECTION : EVENT_COLLECTION;
+
+  function showDanmakuLockDialog() {
+    if (document.querySelector("#danmaku-lock-dialog")) return;
+    const root = document.querySelector("#modal-root");
+    const dialog = document.createElement("div");
+    dialog.id = "danmaku-lock-dialog";
+    dialog.className = "danmaku-lock-dialog";
+    dialog.innerHTML = `<div class="danmaku-lock-dialog__backdrop"><section class="danmaku-lock-dialog__content" role="dialog" aria-modal="true" aria-labelledby="danmaku-lock-title"><button type="button" class="danmaku-lock-dialog__close" aria-label="閉じる">×</button><p class="eyebrow">DANMAKU LOCKED</p><h2 id="danmaku-lock-title">送信上限に達しました</h2><p>会場スクリーンを実際に彩るDANMAKUは、<strong>LA_OS</strong>でご体験いただけます。</p><a class="button button-primary" href="#laos">LA_OSへ</a></section></div>`;
+    const close = () => dialog.remove();
+    root.append(dialog);
+    dialog.querySelector(".danmaku-lock-dialog__close").onclick = close;
+    dialog.querySelector(".danmaku-lock-dialog__backdrop").onclick = event => { if (event.target === event.currentTarget) close(); };
+  }
   function syncGuestUI() {
     if (welcome) welcome.textContent = `ID: ${guest.displayName}`;
     nameDisplay.textContent = `ID: ${guest.displayName}`;
     eventKey.textContent = activeEvent ? (activeEvent.mode === "sample" ? "SAMPLE" : activeEvent.title) : "SAMPLE";
     monitorEvent.textContent = activeEvent?.mode === "sample" ? "SAMPLE EVENT // VOL.00" : (activeEvent?.title || "LIVE EVENT");
-    const remaining = Math.max(0, GUEST_LIMIT - submissionsForEvent().length);
+    const remaining = remainingForActiveEvent();
     const eventRemaining = Math.max(0, LP_EVENT_LIMIT - feedComments.length);
     const isSample = activeEvent?.mode === "sample";
     const eventLabel = isSample ? "サンプルDANMAKU" : (activeEvent?.eventKey || "DANMAKU");
     const individualLabel = isSample ? "サンプルのDANMAKU" : "DANMAKU";
     limit.textContent = activeEvent
-      ? `1人につき5件まで${individualLabel}が送信できます。\n「${eventLabel}」の送信受付は ${feedComments.length}/${LP_EVENT_LIMIT}件`
+      ? `1人につき5件まで${individualLabel}が送信できます。(残り ${remaining}/${GUEST_LIMIT}回)\n「${eventLabel}」の送信受付は ${feedComments.length}/${LP_EVENT_LIMIT}件`
       : "\u53d7\u4ed8\u5bfe\u8c61\u306e\u30a4\u30d9\u30f3\u30c8\u306f\u3042\u308a\u307e\u305b\u3093";
-    form.querySelector("button").disabled = !activeEvent || eventRemaining <= 0 || remaining <= 0;
+    const userLocked = Boolean(activeEvent) && remaining <= 0;
+    sendButton.textContent = userLocked ? "LOCKED" : "SEND DANMAKU";
+    sendButton.classList.toggle("is-locked", userLocked);
+    sendButton.disabled = !activeEvent || eventRemaining <= 0;
+    sendButton.setAttribute("aria-disabled", String(sendButton.disabled || userLocked));
   }
   function loadEntryStatus() {
     if (!db || !window.DemoDanmakuEvent) {
@@ -94,10 +113,21 @@ window.addEventListener("load", () => {
   if (stage) { [0, 800, 1600].forEach(delay => setTimeout(addSampleComment, delay)); setInterval(addSampleComment, 2600); }
 
   comment.addEventListener("input", () => { counter.textContent = `${comment.value.length} / 25`; });
+  sendButton.addEventListener("click", event => {
+    if (activeEvent && remainingForActiveEvent() <= 0) {
+      event.preventDefault();
+      showDanmakuLockDialog();
+    }
+  });
   form.addEventListener("submit", async event => {
     event.preventDefault();
     const text = comment.value.trim();
     if (!text || text.length > 25 || !activeEvent || !db) return;
+    if (remainingForActiveEvent() <= 0) { showDanmakuLockDialog(); syncGuestUI(); return; }
+    if (window.LPDanmakuModeration?.isBlocked(text)) {
+      status.textContent = "送信できない言葉が含まれています。内容を変更してください。";
+      return;
+    }
     if (feedComments.length >= LP_EVENT_LIMIT) { status.textContent = "このイベントキーのLP受付上限に達しました。"; syncGuestUI(); return; }
     form.querySelector("button").disabled = true;
     try {

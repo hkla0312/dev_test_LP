@@ -1,28 +1,18 @@
-﻿/* global firebase, FIREBASE_CONFIG */
+/* global firebase, FIREBASE_CONFIG */
 (() => {
   'use strict';
 
-  const $ = (selector) => document.querySelector(selector);
+  const $ = (selector, root = document) => root.querySelector(selector);
   const STORAGE_KEY = 'la_os_member_profile_v2';
   const SESSION_MS = 60 * 60 * 1000;
+  const LOGIN_URL = new URL('./login.html', window.location.href).href;
+  const MEMBER_URL = new URL('./index.html', window.location.href).href;
+
+  const isLoginPage = Boolean($('#authGate'));
+  const isMemberPage = Boolean($('.os-shell'));
 
   let authInstance = null;
-  let unsubscribeMember = null;
   let expiryTimer = null;
-
-  const escapeHtml = (value) =>
-    String(value ?? '').replace(/[&<>'"]/g, (char) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[char]));
-
-  const message = (value) => {
-    const node = $('#authMessage');
-    if (node) node.textContent = value || '';
-  };
 
   const loadProfile = () => {
     try {
@@ -41,25 +31,261 @@
     }
   };
 
-  const isFreshProfile = (profile) => Boolean(profile && Number(profile.expiresAt || 0) > Date.now());
-
-  const clearSession = () => {
-    if (expiryTimer) {
-      clearTimeout(expiryTimer);
-      expiryTimer = null;
+  const clearProfile = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
     }
   };
 
-  const scheduleExpiry = (expiresAt) => {
-    clearSession();
-    const remaining = Number(expiresAt || 0) - Date.now();
-    if (!Number.isFinite(remaining) || remaining <= 0) return;
-    expiryTimer = window.setTimeout(async () => {
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch {
-        // ignore
+  const isFreshProfile = (profile) => Boolean(profile && Number(profile.expiresAt || 0) > Date.now());
+
+  const setMessage = (value) => {
+    const node = $('#authMessage');
+    if (node) node.textContent = value || '';
+  };
+
+  const setDebugFlag = (name, value) => {
+    try {
+      document.documentElement.setAttribute(name, String(value));
+    } catch {
+      // ignore
+    }
+  };
+
+  const isValidRegistrationPassword = (value) => {
+    const password = String(value || '').trim();
+    return password.length >= 5
+      && /^[A-Za-z0-9]+$/.test(password)
+      && /[A-Z]/.test(password)
+      && /[a-z]/.test(password);
+  };
+
+  const describeAuthError = (error, actionLabel) => {
+    const code = String(error?.code || '');
+    const fallback = String(error?.message || '不明なエラー');
+    const map = {
+      'auth/email-already-in-use': 'このメールアドレスはすでに使われています。',
+      'auth/invalid-email': 'メールアドレスの形式をご確認ください。',
+      'auth/weak-password': 'パスワードの条件をご確認ください。',
+      'auth/user-not-found': '会員情報が見つかりません。',
+      'auth/wrong-password': 'メールアドレスかパスワードが違います。',
+      'auth/too-many-requests': '試行回数が多すぎます。少し時間をおいてください。',
+      'auth/network-request-failed': 'ネットワーク接続に失敗しました。',
+      'auth/operation-not-allowed': 'この認証方法は利用できません。',
+      'permission-denied': '保存権限がありません。',
+      'unavailable': 'サービスが一時的に利用できません。',
+      'failed-precondition': '事前条件を満たしていません。',
+    };
+
+    const reason = map[code] || fallback;
+    return `${actionLabel}できませんでした。${reason}${code ? `（${code}）` : ''}`;
+  };
+
+  const openPanel = (panel) => {
+    const intro = $('#authIntro');
+    const register = $('#authRegisterPanel');
+    const login = $('#authLoginPanel');
+
+    if (intro) intro.hidden = Boolean(panel);
+    if (register) register.hidden = panel !== 'register';
+    if (login) login.hidden = panel !== 'login';
+  };
+
+  const showShell = () => {
+    $('.os-shell')?.removeAttribute('hidden');
+  };
+
+  const hideShell = () => {
+    $('.os-shell')?.setAttribute('hidden', '');
+  };
+
+  const memberId = () => `#${String(Math.floor(100000 + Math.random() * 900000))}`;
+
+  const memberIdDocId = (value) => String(value || '').replace(/^#/, '') || `member-${Date.now()}`;
+
+  const LOCAL_AUTH_KEY = 'la_os_local_auth_users_v1';
+  const LOCAL_MEMBER_KEY = 'la_os_local_members_v1';
+  let localAuthAdapter = null;
+
+  const readLocalJson = (key, fallback) => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const writeLocalJson = (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // ignore
+    }
+  };
+
+  const loadLocalAuthUsers = () => readLocalJson(LOCAL_AUTH_KEY, []);
+  const saveLocalAuthUsers = (users) => writeLocalJson(LOCAL_AUTH_KEY, users);
+  const loadLocalMembers = () => readLocalJson(LOCAL_MEMBER_KEY, {});
+  const saveLocalMembers = (members) => writeLocalJson(LOCAL_MEMBER_KEY, members);
+
+  const syncLocalAuthRecord = (uid, patch) => {
+    const users = loadLocalAuthUsers();
+    const index = users.findIndex((item) => item.uid === uid);
+    if (index >= 0) {
+      users[index] = { ...users[index], ...patch };
+      saveLocalAuthUsers(users);
+    }
+  };
+
+  const syncLocalMemberRecord = (uid, patch) => {
+    const members = loadLocalMembers();
+    if (members[uid]) {
+      members[uid] = { ...members[uid], ...patch };
+      saveLocalMembers(members);
+    }
+  };
+
+  const primeAuthToken = async (user) => {
+    if (!user || typeof user.getIdToken !== 'function') return;
+    try {
+      await user.getIdToken(true);
+    } catch {
+      // Ignore token refresh issues here; downstream Firestore access will report any real failure.
+    }
+  };
+
+  const pause = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+  const createProfilePayload = (member, fallback = {}) => ({
+    displayName: member?.displayName || fallback.displayName || 'LA_OS',
+    email: member?.email || fallback.email || '',
+    memberId: member?.memberId || fallback.memberId || memberId(),
+    version: member?.version || member?.levelLabel || fallback.version || 'v0.01',
+    archiveAccess: Boolean(member?.archiveAccess ?? fallback.archiveAccess ?? true),
+    currentProgress: Number(member?.currentProgress ?? fallback.currentProgress ?? 38),
+    requiredProgress: Number(member?.requiredProgress ?? fallback.requiredProgress ?? 100),
+    versionUpPending: Boolean(member?.versionUpPending ?? fallback.versionUpPending ?? true),
+    xAccount: member?.xAccount || member?.xId || fallback.xAccount || '',
+  });
+
+  const createLocalUser = (record) => ({
+    uid: record.uid,
+    email: record.email,
+    displayName: record.displayName || '',
+    emailVerified: false,
+    async updateProfile(profile = {}) {
+      const displayName = String(profile.displayName || '').trim();
+      this.displayName = displayName;
+      syncLocalAuthRecord(record.uid, { displayName });
+      syncLocalMemberRecord(record.uid, { displayName });
+    },
+    async delete() {
+      const users = loadLocalAuthUsers().filter((item) => item.uid !== record.uid);
+      saveLocalAuthUsers(users);
+      const members = loadLocalMembers();
+      delete members[record.uid];
+      saveLocalMembers(members);
+      if (localAuthAdapter?.currentUser?.uid === record.uid) {
+        localAuthAdapter.currentUser = null;
+        localAuthAdapter.notify();
       }
+    },
+    async getIdToken() {
+      return `local-token-${record.uid}`;
+    },
+  });
+
+  const createLocalAuthAdapter = () => {
+    const listeners = new Set();
+    const adapter = {
+      __isLocalAuth: true,
+      currentUser: null,
+      setPersistence: async () => {},
+      onAuthStateChanged(callback) {
+        listeners.add(callback);
+        try {
+          callback(adapter.currentUser);
+        } catch {
+          // ignore
+        }
+        return () => listeners.delete(callback);
+      },
+      notify() {
+        listeners.forEach((callback) => {
+          try {
+            callback(adapter.currentUser);
+          } catch {
+            // ignore
+          }
+        });
+      },
+      async createUserWithEmailAndPassword(email, password) {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const users = loadLocalAuthUsers();
+        if (users.some((item) => item.email === normalizedEmail)) {
+          const error = new Error('The email address is already in use by another account.');
+          error.code = 'auth/email-already-in-use';
+          throw error;
+        }
+        const userRecord = {
+          uid: `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+          email: normalizedEmail,
+          password: String(password || ''),
+          displayName: '',
+        };
+        users.push(userRecord);
+        saveLocalAuthUsers(users);
+        const user = createLocalUser(userRecord);
+        adapter.currentUser = user;
+        adapter.notify();
+        return { user };
+      },
+      async signInWithEmailAndPassword(email, password) {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const users = loadLocalAuthUsers();
+        const userRecord = users.find((item) => item.email === normalizedEmail);
+        if (!userRecord) {
+          const error = new Error('There is no user record corresponding to this identifier.');
+          error.code = 'auth/user-not-found';
+          throw error;
+        }
+        if (String(userRecord.password || '') !== String(password || '')) {
+          const error = new Error('The password is invalid or the user does not have a password.');
+          error.code = 'auth/wrong-password';
+          throw error;
+        }
+        const user = createLocalUser(userRecord);
+        adapter.currentUser = user;
+        adapter.notify();
+        return { user };
+      },
+      async signOut() {
+        adapter.currentUser = null;
+        adapter.notify();
+      },
+      async fetchSignInMethodsForEmail(email) {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        return loadLocalAuthUsers().some((item) => item.email === normalizedEmail) ? ['password'] : [];
+      },
+    };
+    localAuthAdapter = adapter;
+    return adapter;
+  };
+
+  const persistSession = (profile, secret = '') => {
+    const expiresAt = Date.now() + SESSION_MS;
+    saveProfile({
+      ...profile,
+      secret,
+      expiresAt,
+    });
+
+    window.clearTimeout(expiryTimer);
+    expiryTimer = window.setTimeout(async () => {
+      clearProfile();
       if (authInstance?.currentUser) {
         try {
           await authInstance.signOut();
@@ -67,329 +293,402 @@
           // ignore
         }
       }
-      showGate();
-      message('セッションの有効期限が切れました。もう一度ログインしてください。');
-    }, remaining);
+      window.location.replace(LOGIN_URL);
+    }, SESSION_MS);
   };
 
-  const memberId = () => `#${String(Math.floor(100000 + Math.random() * 900000))}`;
+  const initFirebase = () => {
+    if (typeof firebase === 'undefined' || typeof FIREBASE_CONFIG === 'undefined') return null;
 
-  const tempPassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-    let value = '';
-    for (let i = 0; i < 18; i += 1) {
-      value += chars[Math.floor(Math.random() * chars.length)];
+    try {
+      if (!firebase.apps?.length) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+      }
+      return firebase.auth();
+    } catch (error) {
+      console.error('Firebase init failed', error);
+      return null;
     }
-    return `${value}!9`;
   };
 
-  const showGate = () => {
-    $('#authGate')?.removeAttribute('hidden');
-    $('.os-shell')?.setAttribute('hidden', '');
-    openPanel(null);
-  };
+  const ensureMemberRecord = async (user, fallbackProfile = {}) => {
+    if (!user) {
+      return createProfilePayload(null, fallbackProfile);
+    }
 
-  const showShell = () => {
-    $('#authGate')?.setAttribute('hidden', '');
-    $('.os-shell')?.removeAttribute('hidden');
-  };
+    if (authInstance?.__isLocalAuth || typeof firebase === 'undefined' || !firebase.firestore) {
+      const members = loadLocalMembers();
+      const existing = members[user.uid] || null;
+      const fallback = createProfilePayload(existing, fallbackProfile);
 
-  const openPanel = (panel) => {
-    const register = $('#authRegisterPanel');
-    const login = $('#authLoginPanel');
-    if (register) register.hidden = panel !== 'register';
-    if (login) login.hidden = panel !== 'login';
-  };
+      if (!existing) {
+        const createdAt = new Date().toISOString();
+        const member = {
+          uid: user.uid,
+          memberId: fallback.memberId,
+          displayName: fallback.displayName,
+          email: user.email || fallback.email || '',
+          emailVerified: Boolean(user.emailVerified),
+          progress: fallback.currentProgress,
+          currentProgress: fallback.currentProgress,
+          requiredProgress: fallback.requiredProgress,
+          version: fallback.version,
+          versionUpPending: fallback.versionUpPending,
+          archiveAccess: fallback.archiveAccess,
+          levelValue: 1,
+          levelLabel: fallback.version,
+          accountStatus: 'active',
+          environment: 'prod',
+          lastLoginAt: createdAt,
+          registeredAt: createdAt,
+          createdAt,
+          updatedAt: createdAt,
+        };
+        members[user.uid] = member;
+        saveLocalMembers(members);
+        syncLocalAuthRecord(user.uid, { displayName: member.displayName, memberId: member.memberId });
+        return createProfilePayload(member, fallback);
+      }
 
-  const loginSuccess = (name) => {
-    document.querySelector('.login-success-dialog')?.remove();
-    const dialog = document.createElement('section');
-    dialog.className = 'login-success-dialog';
-    dialog.innerHTML = `
-      <div>
-        <p>REGISTERED</p>
-        <h2>${escapeHtml(name)} さん、ようこそ。</h2>
-        <span>会員ページを開きます。</span>
-        <button type="button">LA_OSを開く</button>
-      </div>
-    `;
-    document.body.append(dialog);
-    dialog.querySelector('button')?.addEventListener('click', () => dialog.remove());
-  };
+      return createProfilePayload(existing, fallback);
+    }
 
-  const renderMember = (member) => {
-    const displayName = member?.displayName || 'LA_OS';
-    const version = member?.version || member?.levelLabel || 'v0.01';
-    const email = member?.email || '';
-    const code = member?.memberId || '—';
-    const progress = Number(member?.progress ?? member?.currentProgress ?? 0);
-    const required = Number(member?.requiredProgress ?? 100);
-    const ratio = required > 0 ? Math.max(0, Math.min(100, Math.round((progress / required) * 100))) : 0;
-
-    const header = $('#header-identity');
-    if (header) header.textContent = `${displayName} ${version}`;
-
-    const displayNameInput = $('#settings-display-name');
-    if (displayNameInput) displayNameInput.value = displayName;
-
-    const emailInput = $('#settings-email');
-    if (emailInput) emailInput.value = email;
-
-    const memberIdNode = $('#settings-member-id');
-    if (memberIdNode) memberIdNode.textContent = code;
-
-    const progressValue = $('#progress-value');
-    if (progressValue) progressValue.textContent = String(ratio);
-
-    const progressNote = $('#progress-note');
-    if (progressNote) progressNote.textContent = '進捗を表示中。なにか起こるかも。';
-
-    const progressFill = $('#progress-fill');
-    if (progressFill) progressFill.style.width = `${ratio}%`;
-
-    const progressTrack = $('#progress-track');
-    if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(ratio));
-  };
-
-  async function createMemberRecord(user, displayName, assignedMemberId = memberId()) {
+    await primeAuthToken(user);
+    await pause(600);
     const db = firebase.firestore();
-    const batch = db.batch();
+    const ref = db.collection('members').doc(user.uid);
     const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+    let member = null;
 
-    batch.set(db.collection('memberIds').doc(assignedMemberId), {
-      uid: user.uid,
-      createdAt: timestamp,
-    });
+    try {
+      const snapshot = await ref.get();
+      member = snapshot.exists ? snapshot.data() : null;
+    } catch (readError) {
+      console.warn('member profile read skipped', readError);
+    }
 
-    batch.set(db.collection('members').doc(user.uid), {
+    const fallback = createProfilePayload(member, fallbackProfile);
+
+    if (!member) {
+      member = {
+        uid: user.uid,
+        memberId: fallback.memberId,
+        displayName: fallback.displayName,
+        email: user.email || fallback.email || '',
+        emailVerified: Boolean(user.emailVerified),
+        progress: fallback.currentProgress,
+        currentProgress: fallback.currentProgress,
+        requiredProgress: fallback.requiredProgress,
+        version: fallback.version,
+        versionUpPending: fallback.versionUpPending,
+        archiveAccess: fallback.archiveAccess,
+        levelValue: 1,
+        levelLabel: fallback.version,
+        accountStatus: 'active',
+        environment: 'prod',
+        lastLoginAt: timestamp,
+        registeredAt: timestamp,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+
+      await ref.set(member);
+
+      try {
+        await db.collection('memberIds').doc(memberIdDocId(member.memberId)).set({
+          uid: user.uid,
+          memberId: member.memberId,
+          displayName: member.displayName,
+          createdAt: timestamp,
+        });
+      } catch (memberIdWriteError) {
+        console.warn('memberIds write skipped', memberIdWriteError);
+      }
+
+      return createProfilePayload(member, fallback);
+    }
+
+    return createProfilePayload(member, fallback);
+  };
+
+  const saveMemberRecord = async (user, fallbackProfile = {}) => {
+    if (!user) {
+      return createProfilePayload(null, fallbackProfile);
+    }
+
+    if (authInstance?.__isLocalAuth || typeof firebase === 'undefined' || !firebase.firestore) {
+      const createdAt = new Date().toISOString();
+      const member = {
+        uid: user.uid,
+        memberId: fallbackProfile.memberId || memberId(),
+        displayName: fallbackProfile.displayName || user.displayName || 'LA_OS',
+        email: user.email || fallbackProfile.email || '',
+        emailVerified: Boolean(user.emailVerified),
+        progress: Number(fallbackProfile.currentProgress ?? 38),
+        currentProgress: Number(fallbackProfile.currentProgress ?? 38),
+        requiredProgress: Number(fallbackProfile.requiredProgress ?? 100),
+        version: fallbackProfile.version || 'v0.01',
+        versionUpPending: Boolean(fallbackProfile.versionUpPending ?? true),
+        archiveAccess: Boolean(fallbackProfile.archiveAccess ?? true),
+        levelValue: 1,
+        levelLabel: fallbackProfile.version || 'v0.01',
+        accountStatus: 'active',
+        environment: 'prod',
+        lastLoginAt: createdAt,
+        registeredAt: createdAt,
+        createdAt,
+        updatedAt: createdAt,
+      };
+      const members = loadLocalMembers();
+      members[user.uid] = member;
+      saveLocalMembers(members);
+      syncLocalAuthRecord(user.uid, { displayName: member.displayName, memberId: member.memberId });
+      return createProfilePayload(member, fallbackProfile);
+    }
+
+    await primeAuthToken(user);
+    await pause(600);
+    const db = firebase.firestore();
+    const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+    const member = {
       uid: user.uid,
-      memberId: assignedMemberId,
-      displayName,
-      email: user.email,
+      memberId: fallbackProfile.memberId || memberId(),
+      displayName: fallbackProfile.displayName || user.displayName || 'LA_OS',
+      email: user.email || fallbackProfile.email || '',
       emailVerified: Boolean(user.emailVerified),
-      xId: null,
-      progress: 0,
+      progress: Number(fallbackProfile.currentProgress ?? 38),
+      currentProgress: Number(fallbackProfile.currentProgress ?? 38),
+      requiredProgress: Number(fallbackProfile.requiredProgress ?? 100),
+      version: fallbackProfile.version || 'v0.01',
+      versionUpPending: Boolean(fallbackProfile.versionUpPending ?? true),
+      archiveAccess: Boolean(fallbackProfile.archiveAccess ?? true),
       levelValue: 1,
-      levelLabel: 'v0.01',
-      licenseType: 'NONE',
+      levelLabel: fallbackProfile.version || 'v0.01',
       accountStatus: 'active',
-      environment: 'dev',
-      registeredAt: timestamp,
+      environment: 'prod',
       lastLoginAt: timestamp,
+      registeredAt: timestamp,
       createdAt: timestamp,
       updatedAt: timestamp,
-    });
+    };
 
-    await batch.commit();
-    return assignedMemberId;
-  }
+    await db.collection('members').doc(user.uid).set(member);
 
-  async function showMember(user) {
-    await user.reload();
-    const currentUser = firebase.auth().currentUser || user;
-    const db = firebase.firestore();
-    const ref = db.collection('members').doc(currentUser.uid);
-    const snap = await ref.get();
-
-    let member = snap.exists ? snap.data() : null;
-    if (!member) {
-      const stored = loadProfile();
-      const fallbackDisplayName = (stored && stored.displayName) || currentUser.displayName || currentUser.email?.split('@')[0] || 'LA_OS';
-      const fallbackMemberId = (stored && stored.memberId) || memberId();
-      await createMemberRecord(currentUser, fallbackDisplayName, fallbackMemberId);
-      member = {
-        uid: currentUser.uid,
-        memberId: fallbackMemberId,
-        displayName: fallbackDisplayName,
-        email: currentUser.email,
-        emailVerified: Boolean(currentUser.emailVerified),
-        progress: 0,
-        levelValue: 1,
-        levelLabel: 'v0.01',
-        version: 'v0.01',
-      };
+    try {
+      await db.collection('memberIds').doc(memberIdDocId(member.memberId)).set({
+        uid: user.uid,
+        memberId: member.memberId,
+        displayName: member.displayName,
+        createdAt: timestamp,
+      });
+    } catch (memberIdWriteError) {
+      console.warn('memberIds write skipped', memberIdWriteError);
     }
 
-    if (!member.displayName) {
-      member.displayName = currentUser.displayName || 'LA_OS';
-      await ref.set({ displayName: member.displayName, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    return createProfilePayload(member, fallbackProfile);
+  };
+
+  const isEmailActuallyInUse = async (email) => {
+    if (!authInstance || typeof authInstance.fetchSignInMethodsForEmail !== 'function') {
+      return null;
     }
 
-    if (currentUser.emailVerified && !member.emailVerified) {
-      await ref.set({ emailVerified: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    try {
+      const methods = await authInstance.fetchSignInMethodsForEmail(email);
+      return Array.isArray(methods) && methods.length > 0;
+    } catch {
+      return null;
+    }
+  };
+
+  const redirectToLogin = () => window.location.replace(LOGIN_URL);
+  const redirectToMember = () => window.location.replace(MEMBER_URL);
+
+  const syncLoginPage = async () => {
+    const stored = loadProfile();
+    if (isFreshProfile(stored)) {
+      redirectToMember();
+      return;
     }
 
-    await ref.set(
-      {
-        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    if (authInstance?.currentUser) {
+      try {
+        await authInstance.signOut();
+      } catch {
+        // ignore
+      }
+    }
 
-    saveProfile({
-      displayName: member.displayName,
-      email: currentUser.email,
-      memberId: member.memberId,
-      version: member.version || member.levelLabel || 'v0.01',
-      secret: loadProfile()?.secret || '',
-      expiresAt: Date.now() + SESSION_MS,
-    });
-    scheduleExpiry(Date.now() + SESSION_MS);
+    openPanel(null);
+
+    const displayNameInput = $('#authRegister [name="displayName"]');
+    const emailInput = $('#authRegister [name="email"]');
+    const passwordInput = $('#authRegister [name="password"]');
+    const loginEmailInput = $('#authLogin [name="email"]');
+    const loginPasswordInput = $('#authLogin [name="password"]');
+
+    if (stored) {
+      if (displayNameInput && !displayNameInput.value) displayNameInput.value = stored.displayName || '';
+      if (emailInput && !emailInput.value) emailInput.value = stored.email || '';
+      if (passwordInput && !passwordInput.value && stored.secret) passwordInput.value = stored.secret;
+      if (loginEmailInput && !loginEmailInput.value) loginEmailInput.value = stored.email || '';
+      if (loginPasswordInput && !loginPasswordInput.value && stored.secret) loginPasswordInput.value = stored.secret;
+    }
+  };
+
+  const syncMemberPage = async () => {
+    const stored = loadProfile();
+    if (!isFreshProfile(stored)) {
+      clearProfile();
+      if (authInstance?.currentUser) {
+        try {
+          await authInstance.signOut();
+        } catch {
+          // ignore
+        }
+      }
+      hideShell();
+      redirectToLogin();
+      return;
+    }
 
     showShell();
-    renderMember(member);
-
-    if (unsubscribeMember) unsubscribeMember();
-    unsubscribeMember = ref.onSnapshot(
-      (doc) => {
-        if (!doc.exists) return;
-        const data = doc.data();
-        renderMember(data);
-        saveProfile({
-          displayName: data.displayName,
-          email: data.email || currentUser.email,
-          memberId: data.memberId,
-          version: data.version || data.levelLabel || 'v0.01',
-          secret: loadProfile()?.secret || '',
-          expiresAt: Date.now() + SESSION_MS,
-        });
-        scheduleExpiry(Date.now() + SESSION_MS);
-      },
-      () => {
-        message('会員データの同期に失敗しました。');
-      }
-    );
-  }
+  };
 
   async function handleRegister(event) {
     event.preventDefault();
-    message('');
+    setDebugFlag('data-laos-last-auth-action', 'register');
+    setDebugFlag('data-laos-register-hit', Number(document.documentElement.getAttribute('data-laos-register-hit') || 0) + 1);
+    setMessage('');
 
     const form = new FormData(event.currentTarget);
     const displayName = String(form.get('displayName') || '').trim();
     const email = String(form.get('email') || '').trim().toLowerCase();
+    const password = String(form.get('password') || '').trim();
 
     if (!displayName) {
-      message('名前を入力してください。');
+      setMessage('名前を入力してください。');
       return;
     }
 
     if (!email) {
-      message('メアドを入力してください。');
+      setMessage('メアドを入力してください。');
       return;
     }
 
-    const profile = {
+    if (!isValidRegistrationPassword(password)) {
+      setMessage('パスワードは英数字5文字以上で、英大文字と英小文字をそれぞれ1文字以上含めてください。');
+      return;
+    }
+
+    if (!authInstance) {
+      setMessage('登録機能の準備ができていません。');
+      return;
+    }
+
+    const fallbackProfile = createProfilePayload(null, {
       displayName,
       email,
       memberId: memberId(),
       version: 'v0.01',
-    };
-    const secret = tempPassword();
-    saveProfile({ ...profile, secret, expiresAt: Date.now() + SESSION_MS });
-    scheduleExpiry(Date.now() + SESSION_MS);
-
-    if (!authInstance) {
-      renderMember({ ...profile, progress: 0, levelLabel: 'v0.01' });
-      showShell();
-      return;
-    }
+      archiveAccess: true,
+      currentProgress: 38,
+      requiredProgress: 100,
+      versionUpPending: true,
+    });
 
     try {
-      const result = await authInstance.createUserWithEmailAndPassword(email, secret);
+      const result = await authInstance.createUserWithEmailAndPassword(email, password);
       await result.user.updateProfile({ displayName });
-      const assignedMemberId = await createMemberRecord(result.user, displayName, profile.memberId);
-      saveProfile({ ...profile, memberId: assignedMemberId, secret, expiresAt: Date.now() + SESSION_MS });
-      scheduleExpiry(Date.now() + SESSION_MS);
-      await showMember(result.user);
+
+      try {
+        const profile = await saveMemberRecord(result.user, fallbackProfile);
+        persistSession(profile, password);
+        redirectToMember();
+      } catch (firestoreError) {
+        try {
+          await result.user.delete();
+        } catch {
+          // ignore rollback failure
+        }
+        setMessage(describeAuthError(firestoreError, '登録'));
+      }
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
-        const stored = loadProfile();
-        if (stored && stored.email === email && stored.secret) {
+        const actuallyInUse = await isEmailActuallyInUse(email);
+        if (actuallyInUse === false) {
           try {
-            const result = await authInstance.signInWithEmailAndPassword(email, stored.secret);
-            await showMember(result.user);
+            const retry = await authInstance.createUserWithEmailAndPassword(email, password);
+            await retry.user.updateProfile({ displayName });
+            const profile = await saveMemberRecord(retry.user, fallbackProfile);
+            persistSession(profile, password);
+            redirectToMember();
             return;
-          } catch {
-            // fall through
+          } catch (retryError) {
+            setMessage(describeAuthError(retryError, '登録'));
+            return;
           }
         }
-        message('このメールアドレスは登録済みです。');
-        return;
       }
 
-      console.error('Registration fallback', error);
-      renderMember({ ...profile, progress: 0, levelLabel: 'v0.01' });
-      showShell();
+      setMessage(describeAuthError(error, '登録'));
     }
   }
 
   async function handleLogin(event) {
     event.preventDefault();
-    message('');
-
-    if (!authInstance) {
-      message('ログイン機能を準備中です。');
-      return;
-    }
+    setDebugFlag('data-laos-last-auth-action', 'login');
+    setDebugFlag('data-laos-login-hit', Number(document.documentElement.getAttribute('data-laos-login-hit') || 0) + 1);
+    setMessage('');
 
     const form = new FormData(event.currentTarget);
     const email = String(form.get('email') || '').trim().toLowerCase();
     const password = String(form.get('password') || '');
 
+    if (!email || !password) {
+      setMessage('メールアドレスとパスワードを入力してください。');
+      return;
+    }
+
+    if (!authInstance) {
+      setMessage('ログイン機能の準備ができていません。');
+      return;
+    }
+
     try {
       const credential = await authInstance.signInWithEmailAndPassword(email, password);
-      await showMember(credential.user || authInstance.currentUser || { reload: async () => {} });
+      await primeAuthToken(credential.user);
+      try {
+        const profile = await ensureMemberRecord(credential.user, loadProfile() || {});
+        persistSession(profile, password);
+        redirectToMember();
+      } catch (profileError) {
+        try {
+          await authInstance.signOut();
+        } catch {
+          // ignore
+        }
+        setMessage(describeAuthError(profileError, 'ログイン'));
+      }
     } catch (error) {
-      message(
-        error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found'
-          ? 'メールアドレスかパスワードが違います。'
-          : 'ログインに失敗しました。'
-      );
+      setMessage(describeAuthError(error, 'ログイン'));
     }
   }
 
-  function init() {
-    const stored = loadProfile();
-    openPanel(null);
-    if (stored) {
-      const displayNameInput = $('#authRegister [name="displayName"]');
-      const emailInput = $('#authRegister [name="email"]');
-      const loginEmailInput = $('#authLogin [name="email"]');
-      const loginPasswordInput = $('#authLogin [name="password"]');
-      if (displayNameInput && !displayNameInput.value) displayNameInput.value = stored.displayName || '';
-      if (emailInput && !emailInput.value) emailInput.value = stored.email || '';
-      if (loginEmailInput && !loginEmailInput.value) loginEmailInput.value = stored.email || '';
-      if (loginPasswordInput && !loginPasswordInput.value && stored.secret) loginPasswordInput.value = stored.secret;
-    }
-
-    if (typeof firebase !== 'undefined' && typeof FIREBASE_CONFIG !== 'undefined') {
+  async function handleLogout() {
+    clearProfile();
+    window.clearTimeout(expiryTimer);
+    if (authInstance) {
       try {
-        firebase.initializeApp(FIREBASE_CONFIG);
-        authInstance = firebase.auth();
-        if (authInstance.setPersistence) {
-          authInstance.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
-        }
-        authInstance.onAuthStateChanged(async (user) => {
-          if (!user) return;
-          try {
-            const cached = loadProfile();
-            if (!isFreshProfile(cached) || (cached?.email && cached.email !== user.email)) {
-              await authInstance.signOut();
-              showGate();
-              return;
-            }
-            await showMember(user);
-          } catch (error) {
-            message(error.message || '会員情報の表示に失敗しました。');
-          }
-        });
-      } catch (error) {
-        console.error('Firebase init failed', error);
+        await authInstance.signOut();
+      } catch {
+        // ignore
       }
     }
+    redirectToLogin();
+  }
 
+  function bindLoginPage() {
     $('#auth-show-register')?.addEventListener('click', () => {
       openPanel('register');
       $('#authRegister [name="displayName"]')?.focus();
@@ -402,44 +701,79 @@
 
     $('#authRegister')?.addEventListener('submit', handleRegister);
     $('#authLogin')?.addEventListener('submit', handleLogin);
+  }
 
-    $('#logout-button')?.addEventListener('click', async () => {
-      clearSession();
-      if (unsubscribeMember) unsubscribeMember();
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch {
-        // ignore
+  function bindMemberPage() {
+    $('#logout-button')?.addEventListener('click', handleLogout);
+  }
+
+  async function bootstrap() {
+    authInstance = initFirebase();
+    setDebugFlag('data-laos-auth-mode', authInstance ? 'firebase' : 'unavailable');
+
+    if (authInstance?.setPersistence && typeof firebase !== 'undefined' && firebase.auth?.Auth) {
+      authInstance.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+    }
+
+    if (!authInstance) {
+      if (isLoginPage) {
+        setMessage('Firebaseの準備ができていません。オンライン環境と設定を確認してください。');
       }
+      return;
+    }
 
-      if (authInstance) {
-        try {
-          await authInstance.signOut();
-        } catch {
-          // ignore
+    if (isLoginPage) {
+      bindLoginPage();
+      await syncLoginPage();
+    }
+
+    if (isMemberPage) {
+      bindMemberPage();
+      await syncMemberPage();
+    }
+
+    if (authInstance) {
+      authInstance.onAuthStateChanged(async (user) => {
+        const stored = loadProfile();
+        const fresh = isFreshProfile(stored);
+
+        if (isLoginPage) {
+          if (user && fresh) {
+            redirectToMember();
+            return;
+          }
+
+          if (user && !fresh) {
+            try {
+              await authInstance.signOut();
+            } catch {
+              // ignore
+            }
+            clearProfile();
+          }
+          return;
         }
-      }
 
-      showGate();
-      location.reload();
-    });
-
-    const cached = loadProfile();
-    if (isFreshProfile(cached)) {
-      scheduleExpiry(cached.expiresAt);
-      showShell();
-      renderMember({
-        displayName: cached.displayName || 'LA_OS',
-        email: cached.email || '',
-        memberId: cached.memberId || '#000000',
-        version: cached.version || 'v0.01',
-        progress: 0,
-        levelLabel: cached.version || 'v0.01',
+        if (isMemberPage) {
+          if (!fresh) {
+            clearProfile();
+            if (user) {
+              try {
+                await authInstance.signOut();
+              } catch {
+                // ignore
+              }
+            }
+            redirectToLogin();
+          }
+        }
       });
     }
 
-    setTimeout(() => $('#authLoader')?.classList.add('is-hidden'), 700);
+    setTimeout(() => {
+      $('#authLoader')?.classList.add('is-hidden');
+    }, 650);
   }
 
-  window.addEventListener('DOMContentLoaded', init);
+  bootstrap();
 })();

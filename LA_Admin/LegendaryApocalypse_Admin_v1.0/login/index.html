@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Legendary Apocalypse | ADMIN LOGIN</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <main class="login-page">
+    <section class="login-card" aria-labelledby="loginTitle">
+      <p class="eyebrow">LEGENDARY APOCALYPSE</p>
+      <h1 id="loginTitle">ADMIN LOGIN</h1>
+      <p class="lead">管理者アカウントでログインしてください。</p>
+      <p id="sessionNotice" class="notice" hidden></p>
+      <form id="adminLoginForm" novalidate>
+        <label>メールアドレス<input id="email" type="email" autocomplete="email" required></label>
+        <label>パスワード<input id="password" type="password" autocomplete="current-password" required minlength="6"></label>
+        <p id="loginError" class="error" role="alert" hidden></p>
+        <button id="loginButton" type="submit">管理画面へ進む</button>
+      </form>
+      <p class="note">ログイン後、管理画面へ自動的に移動します。</p>
+    </section>
+  </main>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="../firebase-config.js?v=20260726"></script>
+  <script src="login.js?v=20260726"></script>
+</body>
+</html>

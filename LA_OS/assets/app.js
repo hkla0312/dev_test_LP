@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   "use strict";
 
   const initialState = {
@@ -86,7 +86,7 @@
         eventId: "evt-001",
         actId: "act-002",
         artistName: "ARTIST 02",
-        comment: "テストメッセージ 01",
+        comment: "繝・せ繝医Γ繝・そ繝ｼ繧ｸ 01",
         timestamp: "2026/04/01 18:00 JST",
       },
       {
@@ -94,7 +94,7 @@
         eventId: "evt-002",
         actId: "act-003",
         artistName: "ARTIST 03",
-        comment: "テストメッセージ 02",
+        comment: "繝・せ繝医Γ繝・そ繝ｼ繧ｸ 02",
         timestamp: "2026/04/01 17:34 JST",
       },
       {
@@ -102,7 +102,7 @@
         eventId: "evt-003",
         actId: "act-005",
         artistName: "ARTIST 05",
-        comment: "テストメッセージ 03",
+        comment: "繝・せ繝医Γ繝・そ繝ｼ繧ｸ 03",
         timestamp: "2026/04/01 17:08 JST",
       },
     ],
@@ -110,7 +110,7 @@
       {
         danmakuId: "DMK-021",
         emote: "spark",
-        comment: "今の流れ好き",
+        comment: "今日も最高だった！",
         memberId: "#000184",
         source: "LIVE #013 / 20:18",
         approved: true,
@@ -118,7 +118,7 @@
       {
         danmakuId: "DMK-020",
         emote: "wave",
-        comment: "ここで来た",
+        comment: "またここで会おう。",
         memberId: "#000312",
         source: "LIVE #012 / 20:06",
         approved: true,
@@ -126,7 +126,7 @@
       {
         danmakuId: "DMK-019",
         emote: "glow",
-        comment: "静かに高まる",
+        comment: "会場の空気が好き。",
         memberId: "#000085",
         source: "LIVE #011 / 19:58",
         approved: true,
@@ -134,7 +134,7 @@
       {
         danmakuId: "DMK-018",
         emote: "pulse",
-        comment: "この瞬間を待ってた",
+        comment: "次の公演も楽しみ。",
         memberId: "#000560",
         source: "LIVE #010 / 19:44",
         approved: true,
@@ -158,12 +158,12 @@
       {
         version: "v0.01",
         date: "2031.07.08",
-        note: "UIシェルを初期化しました。",
+        note: "UIシェルを更新しました。",
       },
       {
         version: "v0.01",
         date: "2031.07.01",
-        note: "アーカイブプレビューを調整しました。",
+        note: "アーカイブ表示を整えました。",
       },
     ],
   };
@@ -173,6 +173,83 @@
     : JSON.parse(JSON.stringify(initialState));
 
   const state = clone;
+  const makeArtistThumbnail = (label, hue) => {
+    const initials = String(label || "AR").slice(0, 2).toUpperCase();
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="${initials}">
+        <defs>
+          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${hue}" stop-opacity="0.92"/>
+            <stop offset="100%" stop-color="#071118" stop-opacity="1"/>
+          </linearGradient>
+        </defs>
+        <rect width="96" height="96" rx="48" fill="url(#g)"/>
+        <circle cx="48" cy="40" r="18" fill="rgba(255,255,255,0.14)"/>
+        <path d="M20 78c8-12 18-18 28-18s20 6 28 18" fill="rgba(255,255,255,0.12)"/>
+        <text x="50%" y="57%" fill="#e9fbff" font-family="monospace" font-size="26" font-weight="700" text-anchor="middle">${initials}</text>
+      </svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  };
+  state.events.forEach((event, eventIndex) => {
+    event.acts.forEach((artist, actIndex) => {
+      if (!artist.imageUrl) {
+        const hue = ["#7ae6e8", "#bc8cff", "#ff8ccd", "#92ff7a", "#ffd56a", "#74bfff"][(eventIndex * 2 + actIndex) % 6];
+        artist.imageUrl = makeArtistThumbnail(artist.name, hue);
+      }
+    });
+  });
+  const STORAGE_KEY = "la_os_member_profile_v2";
+  const SESSION_MS = 60 * 60 * 1000;
+  const loadProfile = () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+  const isFreshProfile = (profile) => Boolean(profile && Number(profile.expiresAt || 0) > Date.now());
+  const writeProfile = (patch = {}) => {
+    try {
+      const current = loadProfile() || {};
+      const next = {
+        ...current,
+        displayName: state.user.displayName,
+        email: state.user.email,
+        memberId: state.user.memberId,
+        version: state.user.version,
+        archiveAccess: state.user.archiveAccess,
+        currentProgress: state.user.currentProgress,
+        requiredProgress: state.user.requiredProgress,
+        versionUpPending: state.user.versionUpPending,
+        xAccount: state.user.xAccount,
+        expiresAt: Number(current.expiresAt || 0) > Date.now() ? Number(current.expiresAt) : Date.now() + SESSION_MS,
+        ...patch,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  };
+  const cachedProfile = loadProfile();
+  if (isFreshProfile(cachedProfile)) {
+    state.user.displayName = cachedProfile.displayName || state.user.displayName;
+    state.user.memberId = cachedProfile.memberId || state.user.memberId;
+    state.user.version = cachedProfile.version || state.user.version;
+    state.user.archiveAccess = typeof cachedProfile.archiveAccess === "boolean" ? cachedProfile.archiveAccess : state.user.archiveAccess;
+    state.user.currentProgress = Number.isFinite(Number(cachedProfile.currentProgress))
+      ? Number(cachedProfile.currentProgress)
+      : state.user.currentProgress;
+    state.user.requiredProgress = Number.isFinite(Number(cachedProfile.requiredProgress))
+      ? Number(cachedProfile.requiredProgress)
+      : state.user.requiredProgress;
+    state.user.versionUpPending = typeof cachedProfile.versionUpPending === "boolean"
+      ? cachedProfile.versionUpPending
+      : state.user.versionUpPending;
+    state.user.xAccount = cachedProfile.xAccount || state.user.xAccount;
+    state.user.email = cachedProfile.email || state.user.email;
+  }
+
   const runtime = {
     archiveExpanded: false,
     reservationDraft: null,
@@ -182,6 +259,8 @@
     signalIndex: 0,
     danmakuIndex: 0,
     danmakuReloadCount: 0,
+    danmakuSendCounts: {},
+    danmakuSenderMode: "id",
     systemUpdateRunning: false,
     systemUpdatePlayed: false,
     toastTimer: 0,
@@ -210,6 +289,86 @@
     option.value = value;
     option.textContent = label;
     return option;
+  };
+  const DANMAKU_LIMIT_PER_EVENT = 5;
+  const DANMAKU_EMOTES = [
+    { value: "spark", emoji: "笨ｨ", label: "spark" },
+    { value: "wave", emoji: "穴", label: "wave" },
+    { value: "pulse", emoji: "帳", label: "pulse" },
+    { value: "glow", emoji: "牒", label: "glow" },
+    { value: "heart", emoji: "猪", label: "heart" },
+    { value: "fire", emoji: "櫨", label: "fire" },
+    { value: "star", emoji: "検", label: "star" },
+    { value: "moon", emoji: "嫌", label: "moon" },
+  ];
+  const getDanmakuEventId = () => state.nextLive?.eventId ?? state.events[0]?.eventId ?? "evt-default";
+  const getDanmakuEventLabel = () => {
+    const live = state.nextLive;
+    const event = live?.eventId ? getEvent(live.eventId) : state.events[0];
+    return live?.title ?? event?.title ?? "EVENT";
+  };
+  const getDanmakuUsage = (eventId = getDanmakuEventId()) => runtime.danmakuSendCounts[eventId] ?? 0;
+  const getDanmakuSenderMode = () => ($("#danmaku-sender-mode-display-name")?.checked ? "displayName" : "id");
+  const getDanmakuSenderLabel = (mode = getDanmakuSenderMode()) =>
+    mode === "displayName" ? state.user.displayName : state.user.memberId;
+  const syncDanmakuSenderPreview = () => {
+    const mode = getDanmakuSenderMode();
+    setText("#danmaku-sender-preview", getDanmakuSenderLabel(mode));
+    setText("#danmaku-sender-note", mode === "displayName" ? "表示名で送信します。" : "IDで送信します。");
+    runtime.danmakuSenderMode = mode;
+  };
+  const syncDanmakuQuota = () => {
+    const eventId = getDanmakuEventId();
+    const used = getDanmakuUsage(eventId);
+    const remaining = Math.max(0, DANMAKU_LIMIT_PER_EVENT - used);
+    const quotaLabel = $("#danmaku-quota-status");
+    const quotaNote = $("#danmaku-quota-note");
+    const submitButton = $("#danmaku-submit");
+
+    if (quotaLabel) quotaLabel.textContent = `${used} / ${DANMAKU_LIMIT_PER_EVENT}`;
+    if (quotaNote) quotaNote.textContent = remaining > 0
+      ? `残り ${remaining} 件です。`
+      : "このイベントの送信上限に達しています。";
+    if (submitButton) submitButton.disabled = used >= DANMAKU_LIMIT_PER_EVENT;
+  };
+  const setDanmakuEmote = (value) => {
+    const palette = $("#danmaku-emote-palette");
+    const hidden = $("#danmaku-emote-value");
+    const nextValue = DANMAKU_EMOTES.some((item) => item.value === value) ? value : DANMAKU_EMOTES[0].value;
+
+    if (hidden) {
+      hidden.value = nextValue;
+    }
+
+    if (!palette) return;
+
+    $$(".emoji-choice", palette).forEach((button) => {
+      const selected = button.dataset.emote === nextValue;
+      button.classList.toggle("is-selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+      button.setAttribute("aria-checked", String(selected));
+    });
+  };
+  const renderDanmakuEmotePalette = () => {
+    const palette = $("#danmaku-emote-palette");
+    if (!palette) return;
+
+    if (!palette.children.length) {
+      const fragment = document.createDocumentFragment();
+      DANMAKU_EMOTES.forEach((item) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "emoji-choice";
+        button.dataset.emote = item.value;
+        button.setAttribute("role", "radio");
+        button.setAttribute("aria-label", item.label);
+        button.innerHTML = `<span class="emoji-symbol" aria-hidden="true">${item.emoji}</span><span class="emoji-name">${item.label}</span><span class="emoji-state">驕ｸ謚樔ｸｭ</span>`;
+        fragment.append(button);
+      });
+      palette.replaceChildren(fragment);
+    }
+
+    setDanmakuEmote($("#danmaku-emote-value")?.value || DANMAKU_EMOTES[0].value);
   };
   const makeId = (prefix) => {
     const value = Math.floor(100 + Math.random() * 900);
@@ -295,6 +454,7 @@
       0,
       state.user.requiredProgress
     );
+    writeProfile({ currentProgress: state.user.currentProgress });
 
     body.classList.add("is-noise");
     $(".chamber-card")?.classList.add("is-pulse");
@@ -349,8 +509,8 @@
     setText("#progress-cycle", "04");
 
     const note = state.user.versionUpPending
-      ? "進捗を表示中。なにか起こるかも。"
-      : "アップデート完了。";
+      ? "進行中です。なにか起こるかもしれません。"
+      : "アーカイブ準備が整っています。";
     setText("#progress-note", note);
 
     const track = $("#progress-track");
@@ -384,7 +544,7 @@
     emptyNode.hidden = true;
     runtime.reservationIndex = clamp(runtime.reservationIndex, 0, Math.max(0, reservations.length - 1));
     state.reservation = getSelectedReservation();
-    stateLabel.textContent = `${pad2(reservations.length)}件`;
+    stateLabel.textContent = `${pad2(reservations.length)}莉ｶ`;
 
     if (carousel) {
       const fragment = document.createDocumentFragment();
@@ -400,10 +560,10 @@
           <span class="reservation-card-index">${pad2(index + 1)}</span>
           <strong>${event.title}</strong>
           <dl>
-            <div><dt>公演日</dt><dd>${event.date}</dd></div>
-            <div><dt>会場</dt><dd>${event.venue}</dd></div>
-            <div><dt>目当てARTIST</dt><dd>${act.name}</dd></div>
-            <div><dt>枚数</dt><dd>${reservation.ticketCount}</dd></div>
+            <div><dt>蜈ｬ貍疲律</dt><dd>${event.date}</dd></div>
+            <div><dt>莨壼ｴ</dt><dd>${event.venue}</dd></div>
+            <div><dt>逶ｮ蠖薙※ARTIST</dt><dd>${act.name}</dd></div>
+            <div><dt>譫壽焚</dt><dd>${reservation.ticketCount}</dd></div>
           </dl>
         `;
         fragment.append(card);
@@ -451,6 +611,78 @@
     setText("#signal-time", signal.timestamp);
   }
 
+  const SIGNAL_EMOTIONS = [
+    { value: "good-vocals", label: "歌が良い" },
+    { value: "good-stage", label: "ステージが良い" },
+    { value: "good-character", label: "キャラが良い" },
+    { value: "other", label: "そのほか" },
+  ];
+
+  function getSignalArtist(value) {
+    const [eventId, actId] = String(value || "").split("::");
+    const event = state.events.find((item) => item.eventId === eventId) ?? state.events[0];
+    const artist = event?.acts.find((item) => item.actId === actId) ?? event?.acts[0];
+    return { event, artist };
+  }
+
+  function renderSignalArtistPreview() {
+    const select = $("#signal-artist-select");
+    const thumb = $("#signal-artist-thumb");
+    const name = $("#signal-artist-name");
+    if (!select || !thumb || !name) return;
+
+    const { artist } = getSignalArtist(select.value);
+    const label = artist?.name ?? "ARTIST";
+    const imageUrl = artist?.imageUrl || "";
+
+    name.textContent = label;
+    thumb.classList.toggle("has-image", Boolean(imageUrl));
+    thumb.innerHTML = imageUrl
+      ? `<img src="${imageUrl}" alt="${label}" />`
+      : `<span aria-hidden="true">${label.slice(0, 2).toUpperCase()}</span>`;
+  }
+
+  const SIGNAL_DAILY_LIMIT = 1;
+  const SIGNAL_DAILY_STORAGE_KEY = "la_os_signal_daily_limit_v1";
+  const getTokyoDateKey = () =>
+    new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
+  const getSignalDailyStorageKey = () => `${SIGNAL_DAILY_STORAGE_KEY}:${state.user.memberId}`;
+  const loadSignalDailyRecord = () => {
+    try {
+      const raw = localStorage.getItem(getSignalDailyStorageKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+  const getSignalDailyUsage = () => {
+    const record = loadSignalDailyRecord();
+    return record?.date === getTokyoDateKey() ? Number(record.used || 0) : 0;
+  };
+  const syncSignalDailyQuota = () => {
+    const used = getSignalDailyUsage();
+    const remaining = Math.max(0, SIGNAL_DAILY_LIMIT - used);
+    const quotaStatus = $("#signal-limit-status");
+    const quotaNote = $("#signal-limit-note");
+    const submitButton = $("#signal-submit");
+
+    if (quotaStatus) quotaStatus.textContent = `${used} / ${SIGNAL_DAILY_LIMIT}`;
+    if (quotaNote) quotaNote.textContent = remaining > 0
+      ? "本日は1回まで送信できます。"
+      : "本日の送信上限に達しています。";
+    if (submitButton) submitButton.disabled = remaining <= 0;
+  };
+  const markSignalDailyUsed = () => {
+    try {
+      localStorage.setItem(getSignalDailyStorageKey(), JSON.stringify({
+        date: getTokyoDateKey(),
+        used: 1,
+      }));
+    } catch {
+      // ignore
+    }
+  };
+
   function renderDanmakuCard() {
     const approved = state.danmaku.filter((entry) => entry.approved);
     const sourceList = approved.length ? approved : state.danmaku;
@@ -461,7 +693,8 @@
 
     setText("#danmaku-emote", highlight.emote);
     setText("#danmaku-message", highlight.comment);
-    setText("#danmaku-meta", `${highlight.memberId} / ${state.user.displayName}`);
+    const senderLabel = highlight.senderLabel || (highlight.memberId ? `${highlight.memberId} / ${state.user.displayName}` : state.user.displayName);
+    setText("#danmaku-meta", senderLabel);
     setText("#danmaku-status", highlight.approved === false ? "PENDING" : "APPROVED");
 
     const complete = $("#danmaku-complete");
@@ -514,7 +747,7 @@
 
     if (plus) plus.hidden = !state.user.archiveAccess;
     title.textContent = state.user.archiveAccess ? "ARCHIVE UNLOCKED" : "ARCHIVE LOCKED";
-    note.textContent = "注釈：会場でのライセンス購入が必要です。";
+    note.textContent = "会場でのライセンス購入で解禁されます。";
 
     if (!state.user.archiveAccess) {
       runtime.archiveExpanded = false;
@@ -637,14 +870,14 @@
           <span>${pad2(index + 1)}</span>
         </div>
         <dl>
-          <div><dt>公演日</dt><dd>${event.date}</dd></div>
-          <div><dt>会場</dt><dd>${event.venue}</dd></div>
-          <div><dt>目当てARTIST</dt><dd>${act.name}</dd></div>
-          <div><dt>枚数</dt><dd>${reservation.ticketCount}</dd></div>
+          <div><dt>蜈ｬ貍疲律</dt><dd>${event.date}</dd></div>
+          <div><dt>莨壼ｴ</dt><dd>${event.venue}</dd></div>
+          <div><dt>逶ｮ蠖薙※ARTIST</dt><dd>${act.name}</dd></div>
+          <div><dt>譫壽焚</dt><dd>${reservation.ticketCount}</dd></div>
         </dl>
         <div class="reservation-detail-actions">
-          <button type="button" class="ghost-button" data-reservation-action="edit" data-reservation-index="${index}">変更する</button>
-          <button type="button" class="ghost-button" data-reservation-action="cancel" data-reservation-index="${index}">キャンセルする</button>
+          <button type="button" class="ghost-button" data-reservation-action="edit" data-reservation-index="${index}">螟画峩縺吶ｋ</button>
+          <button type="button" class="ghost-button" data-reservation-action="cancel" data-reservation-index="${index}">繧ｭ繝｣繝ｳ繧ｻ繝ｫ縺吶ｋ</button>
         </div>
       `;
       fragment.append(item);
@@ -704,6 +937,7 @@
           eventId: event.eventId,
           actId: artist.actId,
           name: artist.name,
+          imageUrl: artist.imageUrl || "",
         }))
       );
       select.replaceChildren(
@@ -713,11 +947,7 @@
     }
 
     if (emotionSelect && !emotionSelect.options.length) {
-      emotionSelect.replaceChildren(
-        makeOption("good-vocals", "歌が良い"),
-        makeOption("good-stage", "ステージが良い"),
-        makeOption("good-character", "キャラが良い")
-      );
+      emotionSelect.replaceChildren(...SIGNAL_EMOTIONS.map((emotion) => makeOption(emotion.value, emotion.label)));
       emotionSelect.value = "good-vocals";
     }
 
@@ -725,6 +955,9 @@
       comment.value = "";
       updateSignalCounter();
     }
+
+    renderSignalArtistPreview();
+    syncSignalDailyQuota();
 
     openDialog(dialog);
   }
@@ -739,24 +972,20 @@
   function openDanmakuDialog() {
     const dialog = $("#danmaku-dialog");
     const comment = $("#danmaku-comment");
-    const select = $("#danmaku-emote-select");
-
-    if (select && !select.options.length) {
-      select.replaceChildren(
-        makeOption("spark", "spark"),
-        makeOption("wave", "wave"),
-        makeOption("pulse", "pulse"),
-        makeOption("glow", "glow")
-      );
-      select.value = "spark";
-    }
+    renderDanmakuEmotePalette();
+    setDanmakuEmote("spark");
 
     if (comment) {
       comment.value = "";
       updateDanmakuCounter();
     }
 
-    setText("#danmaku-sender-id", state.user.memberId);
+    const mode = runtime.danmakuSenderMode === "displayName" ? "displayName" : "id";
+    const modeInput = $(`#danmaku-sender-mode-${mode === "displayName" ? "display-name" : "id"}`);
+    if (modeInput) modeInput.checked = true;
+    setText("#danmaku-event-label", getDanmakuEventLabel());
+    syncDanmakuSenderPreview();
+    syncDanmakuQuota();
     openDialog(dialog);
   }
 
@@ -784,7 +1013,7 @@
       ["チャンバー", "何かが起こるかもしれません(ComingSoon)"],
       ["シンチョク", "何かが起こるかもしれません(ComingSoon)"],
       ["コクチ", "次回イベント開催のお知らせ"],
-      ["シグナル", "アナタが推しに届けたメッセ―ジが表示されています"],
+      ["シグナル", "アナタが推しに届けたメッセージが表示されています"],
       ["ミンナノダンマク", "ミンナが会場に届けた弾幕が表示されています"],
       ["リロード", "リロードすることで何かのシンチョクがあがります"],
       ["アーカイブ", "過去のイベント映像を公開しています（会場でライセンス購入することで解禁されます。）"],
@@ -851,6 +1080,7 @@
           applyStep(index);
           if (index === steps.length - 1) {
             state.user.versionUpPending = false;
+            writeProfile({ versionUpPending: state.user.versionUpPending });
             runtime.systemUpdatePlayed = true;
             runtime.systemUpdateRunning = false;
             renderHeader();
@@ -977,54 +1207,92 @@
       const select = $("#signal-artist-select");
       const emotionSelect = $("#signal-emotion-select");
       const comment = $("#signal-comment");
+      const used = getSignalDailyUsage();
       if (!select || !emotionSelect || !comment) return;
+      if (used >= SIGNAL_DAILY_LIMIT) {
+        setToast("本日の送信上限に達しています。");
+        syncSignalDailyQuota();
+        return;
+      }
 
       const [eventId, actId] = String(select.value).split("::");
-      const artist = state.events
-        .find((event) => event.eventId === eventId)
-        ?.acts.find((item) => item.actId === actId);
+      const { event: signalEvent, artist } = getSignalArtist(select.value);
+      const emotion = SIGNAL_EMOTIONS.find((item) => item.value === emotionSelect.value) ?? SIGNAL_EMOTIONS[0];
       const message = comment.value.trim();
       if (!message) return;
 
       state.signals.unshift({
         signalId: makeId("SIG"),
-        eventId: eventId || state.events[0].eventId,
+        eventId: eventId || signalEvent?.eventId || state.events[0].eventId,
         actId: artist?.actId ?? actId ?? select.value,
         artistName: artist?.name ?? select.options[select.selectedIndex]?.textContent ?? "ARTIST",
-        emotion: emotionSelect.value,
+        artistImageUrl: artist?.imageUrl || "",
+        emotion: emotion.value,
+        emotionLabel: emotion.label,
         comment: message,
         timestamp: nowLabel(),
       });
 
       runtime.signalIndex = 0;
+      markSignalDailyUsed();
       closeDialog($("#signal-dialog"));
       renderSignalCard();
+      syncSignalDailyQuota();
       pulseProgress("Progressを反映しました。");
     });
+    $("#signal-artist-select")?.addEventListener("change", renderSignalArtistPreview);
+    $("#signal-emotion-select")?.addEventListener("change", () => {});
     $("#signal-comment")?.addEventListener("input", updateSignalCounter);
 
     $("#danmaku-close")?.addEventListener("click", () => closeDialog($("#danmaku-dialog")));
+    $("#danmaku-dialog")?.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!target?.matches?.('input[name="danmaku-sender-mode"]')) return;
+      syncDanmakuSenderPreview();
+    });
+    $("#danmaku-emote-palette")?.addEventListener("click", (event) => {
+      const button = event.target.closest?.(".emoji-choice");
+      if (!button) return;
+      setDanmakuEmote(button.dataset.emote);
+    });
     $("#danmaku-form")?.addEventListener("submit", (event) => {
       event.preventDefault();
-      const select = $("#danmaku-emote-select");
+      const emoteValue = $("#danmaku-emote-value");
       const comment = $("#danmaku-comment");
-      if (!select || !comment) return;
+      const eventId = getDanmakuEventId();
+      const used = getDanmakuUsage(eventId);
+      const senderMode = getDanmakuSenderMode();
+      if (!emoteValue || !comment) return;
+      if (used >= DANMAKU_LIMIT_PER_EVENT) {
+        setToast("このイベントの送信上限に達しています。");
+        syncDanmakuQuota();
+        return;
+      }
 
       const message = comment.value.trim();
       if (!message) return;
+      const senderLabel = getDanmakuSenderLabel(senderMode);
 
       state.danmaku.unshift({
         danmakuId: makeId("DMK"),
-        emote: select.value,
+        eventId,
+        emote: emoteValue.value || DANMAKU_EMOTES[0].value,
         comment: message,
         memberId: state.user.memberId,
-        source: "PENDING / ADMIN REVIEW",
+        senderMode,
+        senderLabel,
+        senderMemberId: state.user.memberId,
+        senderDisplayName: state.user.displayName,
+        source: "DANMAKU",
+        progressGain: 1,
         approved: false,
       });
+      runtime.danmakuSendCounts[eventId] = used + 1;
 
       closeDialog($("#danmaku-dialog"));
       renderDanmakuCard();
-      pulseProgress("Progressを反映しました。");
+      syncDanmakuQuota();
+      pulseProgress("送信内容を反映しました。");
     });
     $("#danmaku-comment")?.addEventListener("input", updateDanmakuCounter);
 
@@ -1064,6 +1332,11 @@
       state.user.xAccount = $("#settings-x-account").value.trim();
       state.user.email = $("#settings-email").value.trim();
       state.user.password = $("#settings-password").value;
+      writeProfile({
+        displayName: state.user.displayName,
+        email: state.user.email,
+        xAccount: state.user.xAccount,
+      });
       renderHeader();
       closeDialog($("#settings-dialog"));
       setToast("保存しました。");

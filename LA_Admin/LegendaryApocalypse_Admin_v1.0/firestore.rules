@@ -23,7 +23,7 @@ service cloud.firestore {
     match /members/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
       allow update: if isAdmin() || (request.auth != null && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'xId', 'updatedAt'])) || (request.auth != null && request.auth.uid == uid && request.auth.token.email_verified == true && request.resource.data.emailVerified == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emailVerified', 'updatedAt']));
-      allow create: if isAdmin() || (request.auth != null && request.auth.uid == uid && request.resource.data.uid == uid && request.resource.data.environment == 'dev');
+      allow create: if isAdmin() || (request.auth != null && request.auth.uid == uid && request.resource.data.uid == uid);
       allow delete: if isAdmin();
     }
     match /memberIds/{memberId} {

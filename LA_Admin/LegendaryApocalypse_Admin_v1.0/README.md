@@ -12,6 +12,19 @@ Firebase Authentication、Firestore、Storage を利用する静的な運営管�
 
 `admins/{uid}` が存在しないアカウントはログインできても管理画面へ進めません。パスワードを Firestore に保存・表示する処理はありません。
 
+## ロリポップでの開発運用
+
+この管理画面はビルド不要です。`LegendaryApocalypse_Admin_v1.0` フォルダの内容を、そのままロリポップの公開ディレクトリへアップロードしてください。`file:///` で直接開かず、必ずHTTPSの公開URLからアクセスします。
+
+アップロード前にFirebase Consoleで以下を確認してください。
+
+1. Authentication の「Sign-in method」でメール／パスワードを有効化する。
+2. Authentication の「Settings」→「Authorized domains」に、ロリポップの公開ドメイン（例：`admin.example.com`）を追加する。
+3. Firestore Rules と Storage Rules を、同梱の `firestore.rules` と `storage.rules` に更新する。
+4. Firebase Authentication の管理者ユーザーのUIDを、Firestoreの `admin/{uid}` または `admins/{uid}` のドキュメントIDとして作成する。
+
+ログインURLは `https://＜公開ドメイン＞/login/`、管理画面は `https://＜公開ドメイン＞/index.html` です。JavaScriptの読込URLにはバージョン番号を付けているため、アップロード後に古い管理画面スクリプトが残りにくい構成です。
+
 ## Firebase 設定とデータ
 
 - 設定は `firebase-config.js` に集約しています。アクセス制御は必ず Rules で行ってください。

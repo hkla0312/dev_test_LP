@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="LA_OS Login" />
+    <title>LA_OS / Login</title>
+    <link rel="stylesheet" href="./assets/styles.css?v=20260726i" />
+  </head>
+  <body>
+    <div class="ambient-grid" aria-hidden="true"></div>
+    <div class="noise-layer" aria-hidden="true"></div>
+    <div class="auth-loader" id="authLoader" aria-live="polite">
+      <strong>LA_OS</strong>
+      <span>INITIALIZING MEMBER TERMINAL...</span>
+      <i></i>
+    </div>
+
+    <main class="auth-gate" id="authGate">
+      <section class="auth-card">
+        <section class="auth-intro" id="authIntro">
+          <p class="auth-welcome">WELCOME TO LA_OS</p>
+          <p class="dialog-eyebrow">LA_OS MEMBER</p>
+          <h1>ようこそ</h1>
+          <p class="auth-copy">はじめての方は登録へ、すでに会員の方はログインへ進んでください。</p>
+          <div class="auth-intro-actions">
+            <button class="ghost-button auth-intro-register" id="auth-show-register" type="button">はじめて</button>
+            <button class="ghost-button" id="auth-show-login" type="button">ログイン</button>
+          </div>
+        </section>
+
+        <p id="authMessage" class="auth-message" aria-live="polite"></p>
+
+        <section class="auth-section auth-register-section" id="authRegisterPanel" hidden>
+          <h2>初回登録</h2>
+          <p>名前、メアド、あたらしいパスワードを入力して、登録して開始します。パスワードは英数字5文字以上で、英大文字と英小文字をそれぞれ1文字以上含めてください。</p>
+          <form id="authRegister">
+            <label class="field">
+              <span>名前</span>
+              <input name="displayName" autocomplete="nickname" required />
+            </label>
+            <label class="field">
+              <span>メアド</span>
+              <input name="email" type="email" autocomplete="email" required />
+            </label>
+            <label class="field">
+              <span>あたらしいパスワード</span>
+              <input
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                minlength="5"
+                pattern="(?=.*[a-z])(?=.*[A-Z])[A-Za-z0-9]{5,}"
+                title="英数字5文字以上で、英大文字と英小文字をそれぞれ1文字以上含めてください。"
+                required
+              />
+            </label>
+            <button class="ghost-button" type="submit">登録して開始</button>
+          </form>
+        </section>
+
+        <section class="auth-section auth-login-section" id="authLoginPanel" hidden>
+          <h2>ログイン</h2>
+          <p>登録済みのメールアドレスとパスワードで続けます。</p>
+          <form id="authLogin">
+            <label class="field">
+              <span>メールアドレス</span>
+              <input name="email" type="email" autocomplete="email" required />
+            </label>
+            <label class="field">
+              <span>パスワード</span>
+              <input name="password" type="password" autocomplete="current-password" required />
+            </label>
+            <button class="ghost-button" type="submit">ログイン</button>
+          </form>
+        </section>
+
+        <div class="auth-return-actions" aria-label="戻り導線">
+          <a class="ghost-button auth-home" href="../LA_LP/index.html">ホームページにもどる</a>
+          <a class="ghost-button auth-os-entry" href="./login.html">OSいりぐちにもどる</a>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="./firebase-config.js"></script>
+    <script src="./assets/auth.js?v=20260726i" defer></script>
+  </body>
+</html>

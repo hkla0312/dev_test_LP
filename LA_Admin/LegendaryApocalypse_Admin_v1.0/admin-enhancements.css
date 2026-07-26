@@ -1,0 +1,18 @@
+/* Existing page structure is intentionally preserved. */
+#loginView .login-card { display: none; }
+#loginView[hidden], #appView[hidden] { display: none !important; }
+.content { padding-top: 14px; }
+.page-head { margin-bottom: 16px; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid color-mix(in srgb, var(--cyan) 45%, transparent); outline-offset: 2px; }
+.nav-item { min-height: 46px; transition: background .16s ease, color .16s ease, transform .16s ease; }
+.nav-item:hover { transform: translateX(3px); }
+.topbar { gap: 16px; }.topbar > div { flex-wrap: wrap; justify-content: flex-end; }.topbar .text-button, .topbar #adminName { border-radius: 5px; }
+.topbar .text-button:hover { background: var(--cyan-soft); color: var(--cyan); }
+.card { transition: border-color .16s ease, box-shadow .16s ease; }.card:hover { border-color: color-mix(in srgb, var(--cyan) 32%, var(--line)); }
+.table-wrap tbody tr { transition: background .14s ease; }.table-wrap tbody tr:hover { background: var(--cyan-soft); }.table-wrap td:last-child { min-width: 270px; }.table-wrap td button { min-height: 36px; margin: 2px 3px 2px 0; }
+.primary, .secondary, .danger { min-height: 40px; transition: filter .14s ease, transform .14s ease, box-shadow .14s ease; }.primary:hover, .secondary:hover, .danger:hover { filter: brightness(.96); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(21, 33, 43, .12); }
+.modal { border: 1px solid color-mix(in srgb, var(--cyan) 26%, var(--line)); }.modal-head { position: sticky; top: -24px; z-index: 1; padding: 8px 0; background: var(--panel); }.modal-footer { position: sticky; bottom: -24px; z-index: 1; padding: 14px 0 0; background: var(--panel); }
+.field input, .field textarea, .field select { min-height: 42px; }.field textarea { min-height: 120px; }
+.artist-picker { display: flex; flex-wrap: wrap; gap: 8px; }.artist-select-tag { border: 1px solid var(--line); border-radius: 999px; padding: 9px 13px; background: var(--panel); cursor: pointer; }.artist-select-tag.selected { color: #fff; border-color: var(--cyan); background: var(--cyan); }
+.artist-tag { display: inline-flex; gap: 6px; align-items: center; margin: 4px; padding: 6px 9px; border-radius: 999px; background: var(--cyan-soft); }
+@media (max-width: 760px) { .topbar { height: auto; min-height: 58px; padding-top: 8px; padding-bottom: 8px; }.table-wrap td:last-child { min-width: 0; } }
