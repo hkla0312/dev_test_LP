@@ -728,6 +728,22 @@
       return;
     }
 
+    // Static GitHub Pages preview account. Production Firebase authentication remains unchanged.
+    if (window.location.hostname.endsWith('github.io') && email === 'demo@la-os.local' && password === 'demo1234') {
+      persistSession({
+        displayName: 'DEMO MEMBER',
+        email,
+        memberId: '#DEMO001',
+        version: 'v0.02',
+        archiveAccess: true,
+        currentProgress: 38,
+        requiredProgress: 100,
+        versionUpPending: false,
+      }, password);
+      redirectToMember();
+      return;
+    }
+
     if (!authInstance) {
       setMessage('ログイン機能の準備ができていません。');
       return;
