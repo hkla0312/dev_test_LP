@@ -713,6 +713,7 @@
       { id: "reserve", label: "予約", icon: "📅" },
       { id: "signal", label: "シグナル", icon: "🖊️" },
       { id: "danmaku", label: "ダンマク", icon: "🖥️" },
+      { id: "onbox", label: "ONBOX", icon: "🎧" },
       { id: "settings", label: "設定", icon: "⚙️" },
     ];
 
@@ -1374,6 +1375,9 @@
         openSignalDialog();
       } else if (action === "danmaku") {
         openDanmakuDialog();
+      } else if (action === "onbox") {
+        window.location.assign(new URL("../la-on-box/?next=watch", window.location.href).href);
+        return;
       } else if (action === "settings") {
         openSettingsDialog();
       }
@@ -1383,6 +1387,7 @@
         reserve: "予約を開きました。",
         signal: "シグナルを開きました。",
         danmaku: "DANMAKUを開きました。",
+        onbox: "LA_ON-BOXへ接続します。",
         settings: "設定を開きました。",
       };
       setToast(labels[action] ?? "");
