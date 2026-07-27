@@ -1,0 +1,43 @@
+name: Deploy LA_ON-BOX to Lolipop
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'la-on-box/**'
+      - '.github/workflows/deploy-la-on-box.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: la-on-box-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: la-on-box/package-lock.json
+      - name: Install and build LA_ON-BOX
+        working-directory: la-on-box
+        run: |
+          npm ci
+          npm run build
+          cp public/.htaccess dist/.htaccess
+      - name: Deploy dist contents over SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        with:
+          server: ${{ secrets.LOLIPOP_HOST }}
+          username: ${{ secrets.LOLIPOP_USERNAME }}
+          password: ${{ secrets.LOLIPOP_PASSWORD }}
+          port: ${{ secrets.LOLIPOP_PORT }}
+          local_path: la-on-box/dist/*
+          remote_path: ${{ secrets.LOLIPOP_REMOTE_DIR }}/la-on-box/
+          sftp_only: true
