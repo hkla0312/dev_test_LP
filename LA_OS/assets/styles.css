@@ -2108,6 +2108,14 @@ body {
   margin-top: 4px;
 }
 
+.field-note {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
 .auth-register-submit {
   border-color: rgba(220, 35, 112, 0.28) !important;
   color: #9d2051 !important;
@@ -2126,6 +2134,20 @@ body {
   color: var(--text) !important;
   background: #fff !important;
   min-height: 46px;
+}
+
+.auth-terminal-return {
+  border-color: rgba(220, 35, 112, 0.24) !important;
+  color: #9d2051 !important;
+  background: linear-gradient(180deg, rgba(255, 244, 248, 0.96), rgba(255, 255, 255, 0.98)) !important;
+  min-height: 46px;
+}
+
+.auth-terminal-return:hover,
+.auth-terminal-return:focus-visible {
+  border-color: rgba(220, 35, 112, 0.42) !important;
+  color: #7b173d !important;
+  background: linear-gradient(180deg, rgba(255, 246, 250, 1), rgba(255, 255, 255, 1)) !important;
 }
 
 .auth-loader-track {
@@ -2172,6 +2194,12 @@ body {
   content: "·";
   margin-right: 10px;
   color: rgba(220, 35, 112, 0.7);
+}
+
+.auth-loader-percent {
+  font: 700 0.82rem var(--font-ui);
+  letter-spacing: 0.14em;
+  color: var(--cyan);
 }
 
 @keyframes auth-progress {

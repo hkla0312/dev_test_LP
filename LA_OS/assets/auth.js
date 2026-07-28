@@ -805,24 +805,27 @@
     const loader = $('#authLoader');
     const stage = $('.auth-loader-stage');
     const fill = $('.auth-loader-track i');
+    const percent = $('#authLoaderPercent');
     if (!loader || !stage || !fill) return;
 
     const phases = [
-      { text: 'CONNECTING SESSION...', delay: 80, width: '28%' },
-      { text: 'VERIFYING PROFILE...', delay: 320, width: '64%' },
-      { text: 'OPENING LA_OS...', delay: 640, width: '100%' },
+      { text: 'CONNECTING SESSION...', delay: 120, width: '22%', percent: '22%' },
+      { text: 'VERIFYING PROFILE...', delay: 420, width: '58%', percent: '58%' },
+      { text: 'OPENING LA_OS...', delay: 760, width: '86%', percent: '86%' },
+      { text: 'SYSTEM ONLINE.', delay: 1120, width: '100%', percent: '100%' },
     ];
 
     phases.forEach((phase) => {
       window.setTimeout(() => {
         stage.textContent = phase.text;
         fill.style.width = phase.width;
+        if (percent) percent.textContent = phase.percent;
       }, phase.delay);
     });
 
     window.setTimeout(() => {
       loader.classList.add('is-hidden');
-    }, 1120);
+    }, 1620);
   }
 
   async function bootstrap() {

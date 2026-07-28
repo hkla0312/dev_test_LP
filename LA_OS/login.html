@@ -6,8 +6,8 @@
     <meta name="color-scheme" content="light" />
     <meta name="description" content="LA_OS Login" />
     <title>LA_OS / Login</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260729a" />
-    <link rel="stylesheet" href="./assets/lp-v002.css?v=20260729a" />
+    <link rel="stylesheet" href="./assets/styles.css?v=20260729b" />
+    <link rel="stylesheet" href="./assets/lp-v002.css?v=20260729b" />
   </head>
   <body>
     <div class="ambient-grid" aria-hidden="true"></div>
@@ -15,13 +15,9 @@
 
     <div class="auth-loader" id="authLoader" aria-live="polite">
       <strong>LA_OS</strong>
-      <span class="auth-loader-stage">INITIALIZING MEMBER TERMINAL...</span>
-      <div class="auth-loader-track" aria-hidden="true"><i></i></div>
-      <div class="auth-loader-steps" aria-hidden="true">
-        <span>CONNECT</span>
-        <span>VERIFY</span>
-        <span>OPEN</span>
-      </div>
+      <span class="auth-loader-stage" id="authLoaderStage">INITIALIZING MEMBER TERMINAL...</span>
+      <div class="auth-loader-track" aria-hidden="true"><i id="authLoaderFill"></i></div>
+      <div class="auth-loader-percent" id="authLoaderPercent">0%</div>
     </div>
 
     <main class="auth-gate" id="authGate">
@@ -30,9 +26,7 @@
           <p class="auth-welcome">WELCOME TO LA_OS</p>
           <p class="dialog-eyebrow">LA_OS MEMBER</p>
           <h1>ようこそ</h1>
-          <p class="auth-copy">
-            はじめての方は新規登録、すでにご登録済みの方はログインを選んでください。
-          </p>
+          <p class="auth-copy">はじめての方は新規登録、すでにご登録済みの方はログインを選んでください。</p>
           <div class="auth-intro-actions">
             <button class="ghost-button auth-intro-register" id="auth-show-register" type="button">はじめて</button>
             <button class="ghost-button" id="auth-show-login" type="button">ログイン</button>
@@ -44,19 +38,17 @@
         <section class="auth-section auth-register-section" id="authRegisterPanel" hidden>
           <h2>新規登録</h2>
           <p>名前、メールアドレス、あたらしいパスワードを入力して、登録して開始します。</p>
-          <ul class="auth-flow-list">
-            <li>名前（ハンドルネーム）</li>
-            <li>メールアドレス</li>
-            <li>新規パスワード（英数字5文字以上 / 大文字と小文字を1文字以上含める）</li>
-          </ul>
+
           <form id="authRegister">
             <label class="field">
               <span>名前（ハンドルネーム）</span>
               <input name="displayName" autocomplete="nickname" required />
+              <small class="field-note">予約、シグナル、DANMAKU送信で表示されます。</small>
             </label>
             <label class="field">
               <span>メールアドレス</span>
               <input name="email" type="email" autocomplete="email" required />
+              <small class="field-note">ログイン確認と連絡用に使います。</small>
             </label>
             <label class="field">
               <span>新規パスワード</span>
@@ -69,33 +61,42 @@
                 title="英数字5文字以上で、大文字と小文字をそれぞれ1文字以上含めてください。"
                 required
               />
+              <small class="field-note">英数字5文字以上、大文字と小文字を1文字以上含めてください。</small>
             </label>
             <button class="ghost-button auth-register-submit" type="submit">登録して開始</button>
           </form>
+
           <a class="ghost-button auth-return-home" href="./login.html">OS入口に戻る</a>
         </section>
 
         <section class="auth-section auth-login-section" id="authLoginPanel" hidden>
           <h2>ログイン</h2>
           <p>登録済みのメールアドレスとパスワードで続けます。</p>
+
           <form id="authLogin">
             <label class="field">
               <span>メールアドレス</span>
               <input name="email" type="email" autocomplete="email" required />
+              <small class="field-note">登録済みのメールアドレスを入力してください。</small>
             </label>
             <label class="field">
               <span>パスワード</span>
               <input name="password" type="password" autocomplete="current-password" required />
+              <small class="field-note">登録時のパスワードを入力してください。</small>
             </label>
             <button class="ghost-button" type="submit">ログイン</button>
           </form>
+
           <div class="mock-credentials">
             <b>GITHUB PAGES MOCK ACCESS</b>
             <span>EMAIL&nbsp;&nbsp; demo@la-os.local</span>
             <span>PASS&nbsp;&nbsp;&nbsp; demo1234</span>
           </div>
+
           <a class="ghost-button auth-return-home" href="./login.html">OS入口に戻る</a>
         </section>
+
+        <a class="ghost-button auth-terminal-return" href="../index.html">LA_Terminalに戻る</a>
       </section>
     </main>
 
@@ -103,6 +104,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="./firebase-config.js"></script>
-    <script src="./assets/auth.js?v=20260729a" defer></script>
+    <script src="./assets/auth.js?v=20260729b" defer></script>
   </body>
 </html>
