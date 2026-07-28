@@ -1106,8 +1106,9 @@
 
   function attachEvents() {
     $("#open-home")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      setToast("Home URL は仮です。");
+      const homeUrl = event.currentTarget?.getAttribute("href") || "../index.html";
+      if (!homeUrl || homeUrl === "#") return;
+      window.location.assign(homeUrl);
     });
     $("#open-help")?.addEventListener("click", openHelpDialog);
     $("#help-close")?.addEventListener("click", () => closeDialog($("#help-dialog")));
