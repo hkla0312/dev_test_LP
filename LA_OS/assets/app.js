@@ -709,28 +709,28 @@
     if (!nav) return;
 
     const actions = [
-      { id: "home", label: "ホーム", icon: "🏠" },
-      { id: "reserve", label: "予約", icon: "📅" },
-      { id: "signal", label: "シグナル", icon: "🖊️" },
-      { id: "danmaku", label: "ダンマク", icon: "🖥️" },
-      { id: "onbox", label: "ONBOX", icon: "🎧" },
-      { id: "settings", label: "設定", icon: "⚙️" },
+      { id: "home", code: "HOME", label: "ホーム" },
+      { id: "reserve", code: "YOYAKU", label: "予約" },
+      { id: "signal", code: "SIGNAL", label: "signal" },
+      { id: "danmaku", code: "DANMAKU", label: "弾幕" },
+      { id: "onbox", code: "ONBOX", label: "視聴" },
+      { id: "settings", code: "SETTINGS", label: "設定" },
     ];
 
     const fragment = document.createDocumentFragment();
     actions.forEach((action) => {
       const button = document.createElement("button");
-      const icon = document.createElement("span");
+      const code = document.createElement("b");
       const label = document.createElement("span");
       button.type = "button";
       button.className = `nav-button${action.id === "home" ? " is-active" : ""}`;
       button.dataset.action = action.id;
       button.setAttribute("aria-label", action.label);
-      icon.className = "nav-icon";
+      code.className = "nav-code";
       label.className = "nav-label";
-      icon.textContent = action.icon;
+      code.textContent = action.code;
       label.textContent = action.label;
-      button.append(icon, label);
+      button.append(code, label);
       fragment.append(button);
     });
 
