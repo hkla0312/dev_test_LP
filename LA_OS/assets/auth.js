@@ -801,6 +801,30 @@
     $('#logout-button')?.addEventListener('click', handleLogout);
   }
 
+  function playAuthLoaderSequence() {
+    const loader = $('#authLoader');
+    const stage = $('.auth-loader-stage');
+    const fill = $('.auth-loader-track i');
+    if (!loader || !stage || !fill) return;
+
+    const phases = [
+      { text: 'CONNECTING SESSION...', delay: 80, width: '28%' },
+      { text: 'VERIFYING PROFILE...', delay: 320, width: '64%' },
+      { text: 'OPENING LA_OS...', delay: 640, width: '100%' },
+    ];
+
+    phases.forEach((phase) => {
+      window.setTimeout(() => {
+        stage.textContent = phase.text;
+        fill.style.width = phase.width;
+      }, phase.delay);
+    });
+
+    window.setTimeout(() => {
+      loader.classList.add('is-hidden');
+    }, 1120);
+  }
+
   async function bootstrap() {
     authInstance = initFirebase();
     setDebugFlag('data-laos-auth-mode', authInstance ? 'firebase' : 'unavailable');
@@ -813,6 +837,7 @@
       if (isLoginPage) {
         setMessage('Firebaseの準備ができていません。オンライン環境と設定を確認してください。');
       }
+      playAuthLoaderSequence();
       return;
     }
 
@@ -864,9 +889,7 @@
       });
     }
 
-    setTimeout(() => {
-      $('#authLoader')?.classList.add('is-hidden');
-    }, 650);
+    playAuthLoaderSequence();
   }
 
   bootstrap();
