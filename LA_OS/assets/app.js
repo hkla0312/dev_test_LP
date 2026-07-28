@@ -292,14 +292,14 @@
   };
   const DANMAKU_LIMIT_PER_EVENT = 5;
   const DANMAKU_EMOTES = [
-    { value: "spark", emoji: "笨ｨ", label: "spark" },
-    { value: "wave", emoji: "穴", label: "wave" },
-    { value: "pulse", emoji: "帳", label: "pulse" },
-    { value: "glow", emoji: "牒", label: "glow" },
-    { value: "heart", emoji: "猪", label: "heart" },
-    { value: "fire", emoji: "櫨", label: "fire" },
-    { value: "star", emoji: "検", label: "star" },
-    { value: "moon", emoji: "嫌", label: "moon" },
+    { value: "spark", emoji: "\u{1F31F}", label: "spark" },
+    { value: "wave", emoji: "\u{1F44B}", label: "wave" },
+    { value: "pulse", emoji: "\u{1FA79}", label: "pulse" },
+    { value: "glow", emoji: "\u{2728}", label: "glow" },
+    { value: "heart", emoji: "\u{1F49C}", label: "heart" },
+    { value: "fire", emoji: "\u{1F525}", label: "fire" },
+    { value: "star", emoji: "\u{2B50}", label: "star" },
+    { value: "moon", emoji: "\u{1F319}", label: "moon" },
   ];
   const getDanmakuEventId = () => state.nextLive?.eventId ?? state.events[0]?.eventId ?? "evt-default";
   const getDanmakuEventLabel = () => {

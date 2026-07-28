@@ -1104,6 +1104,7 @@ body.is-noise::after {
 .emoji-choice .emoji-symbol {
   font-size: 1.35rem;
   line-height: 1;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", var(--font-ui);
 }
 
 .emoji-choice .emoji-name {
