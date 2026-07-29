@@ -47,7 +47,7 @@
               <p class="section-code">01</p>
               <h2 id="chamber-title">チャンバー</h2>
             </div>
-            <span class="state-label" id="chamber-state">READY</span>
+            <span class="state-label" id="chamber-state">準備中</span>
           </div>
 
           <div class="aquarium" role="img" aria-label="チャンバー水槽">
@@ -141,25 +141,32 @@
             <span class="state-label" id="live-state">SCHEDULED</span>
           </div>
 
-          <p class="primary-copy" id="live-name">NEXT EVENT #014</p>
-          <dl class="data-list">
-            <div>
-              <dt>START</dt>
-              <dd id="live-start">20:30 JST</dd>
+          <div class="live-card-body">
+            <div class="live-flyer">
+              <img id="live-flyer-image" alt="" />
             </div>
-            <div>
-              <dt>VENUE</dt>
-              <dd id="live-venue">SECTOR HALL 02</dd>
+            <div class="live-copy">
+              <p class="primary-copy" id="live-name">NEXT EVENT #014</p>
+              <dl class="data-list">
+                <div>
+                  <dt>START</dt>
+                  <dd id="live-start">20:30 JST</dd>
+                </div>
+                <div>
+                  <dt>VENUE</dt>
+                  <dd id="live-venue">SECTOR HALL 02</dd>
+                </div>
+                <div>
+                  <dt>ARTIST</dt>
+                  <dd id="live-act">ARTIST 02</dd>
+                </div>
+                <div>
+                  <dt>CHANNEL</dt>
+                  <dd id="live-channel">LA_TERMINAL</dd>
+                </div>
+              </dl>
             </div>
-            <div>
-              <dt>ARTIST</dt>
-              <dd id="live-act">ARTIST 02</dd>
-            </div>
-            <div>
-              <dt>CHANNEL</dt>
-              <dd id="live-channel">LA_TERMINAL</dd>
-            </div>
-          </dl>
+          </div>
         </section>
 
         <section class="panel signal-card" aria-labelledby="signal-title">
@@ -176,69 +183,6 @@
             <span id="signal-target">ARTIST 02</span>
             <span id="signal-time">2026/04/01 18:00 JST</span>
           </div>
-        </section>
-
-        <section class="panel danmaku-card" aria-labelledby="danmaku-title">
-          <div class="panel-heading">
-            <div>
-              <p class="section-code">06</p>
-              <h2 id="danmaku-title">ミンナノダンマク</h2>
-            </div>
-            <div class="heading-actions">
-              <button class="ghost-button tiny" id="danmaku-help" type="button" aria-label="DANMAKU Help">
-                ?
-              </button>
-              <button class="ghost-button tiny" id="reload-danmaku" type="button">Reload</button>
-            </div>
-          </div>
-
-          <div class="danmaku-highlight">
-            <div class="highlight-ribbon">
-              <span id="danmaku-emote">spark</span>
-              <span id="danmaku-status">APPROVED</span>
-            </div>
-            <blockquote id="danmaku-message"></blockquote>
-            <div class="signal-meta danmaku-meta">
-              <span id="danmaku-meta">#000184 / DANCHO</span>
-            </div>
-          </div>
-
-          <p class="complete-note" id="danmaku-complete" hidden>Today&apos;s Progress Complete</p>
-        </section>
-
-        <section class="panel archive-card" aria-labelledby="archive-title">
-          <div class="panel-heading">
-            <div>
-              <p class="section-code">07</p>
-              <h2 id="archive-title">アーカイブ</h2>
-            </div>
-            <button
-              class="archive-plus"
-              id="archive-plus"
-              type="button"
-              aria-label="Toggle archive preview"
-              hidden
-            >
-              +
-            </button>
-          </div>
-
-          <div class="archive-state">
-            <span class="archive-icon" aria-hidden="true"></span>
-            <div class="archive-copy">
-              <p id="archive-state-title">ARCHIVE UNLOCKED</p>
-              <span id="archive-state-note">注釈：会場でのライセンス購入が必要です。</span>
-            </div>
-          </div>
-
-          <div class="archive-expand" id="archive-expand" aria-hidden="true">
-            <div class="archive-video-frame" id="archive-video-frame">
-              <span>VIDEO EMBED</span>
-              <strong id="archive-video-title">ARCHIVE CUT 01 / 03:14</strong>
-            </div>
-          </div>
-
-          <ul class="archive-list" id="archive-list"></ul>
         </section>
       </main>
 
@@ -293,7 +237,7 @@
 
     <dialog class="os-dialog" id="reservation-form-dialog" aria-labelledby="reservation-form-title">
       <form class="dialog-shell form-shell" id="reservation-form">
-        <p class="dialog-eyebrow">新規イベント予約/p>
+        <p class="dialog-eyebrow">新規イベント予約</p>
         <h3 id="reservation-form-title">予約の確認と変更</h3>
         <p class="dialog-copy">公演日、アーティスト、枚数を選んでください。</p>
 
@@ -370,47 +314,6 @@
         <div class="dialog-actions">
           <button class="ghost-button" id="signal-submit" type="submit">送信する</button>
           <button class="ghost-button" id="signal-close" type="button">閉じる</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog class="os-dialog" id="danmaku-dialog" aria-labelledby="danmaku-title-dialog">
-      <form class="dialog-shell form-shell" id="danmaku-form">
-        <p class="dialog-eyebrow">SEND DANMAKU</p>
-        <h3 id="danmaku-title-dialog">DANMAKU</h3>
-        <p class="dialog-copy">エモートとコメントが会場のスクリーンに反映されます。<br />カラフルな会場づくりに参加してみよう。</p>
-
-        <div class="summary-box">対象イベント: <span id="danmaku-event-label">NEXT EVENT #014</span></div>
-        <div class="field sender-mode-field">
-          <span>Senderの表示方法</span>
-          <div class="sender-mode-switch" role="radiogroup" aria-label="Senderの表示方法">
-            <label class="sender-mode-option" for="danmaku-sender-mode-id">
-              <input id="danmaku-sender-mode-id" type="radio" name="danmaku-sender-mode" value="id" checked />
-              <span>ID</span>
-            </label>
-            <label class="sender-mode-option" for="danmaku-sender-mode-display-name">
-              <input id="danmaku-sender-mode-display-name" type="radio" name="danmaku-sender-mode" value="displayName" />
-              <span>表示名</span>
-            </label>
-          </div>
-        </div>
-        <div class="summary-box">Sender: <span id="danmaku-sender-preview">#000184</span></div>
-        <p class="counter-note" id="danmaku-sender-note">IDで送信します。</p>
-        <div class="summary-box">送信回数: <span id="danmaku-quota-status">0 / 5</span></div>
-        <p class="counter-note" id="danmaku-quota-note">1イベントにつき最大5件まで送信できます。</p>
-        <label class="field">
-          <span>エモート</span>
-          <input id="danmaku-emote-value" type="hidden" name="emote" required />
-          <div class="emoji-palette" id="danmaku-emote-palette" role="radiogroup" aria-label="エモート選択"></div>
-        </label>
-        <label class="field">
-          <span>コメント<small id="danmaku-input-counter">0 / 30</small></span>
-          <textarea id="danmaku-comment" maxlength="30" rows="3" required></textarea>
-        </label>
-
-        <div class="dialog-actions">
-          <button class="ghost-button" id="danmaku-submit" type="submit">送信する</button>
-          <button class="ghost-button" id="danmaku-close" type="button">閉じる</button>
         </div>
       </form>
     </dialog>

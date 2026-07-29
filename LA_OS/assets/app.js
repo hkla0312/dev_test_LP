@@ -71,7 +71,7 @@
       actId: "act-002",
       ticketCount: 2,
     },
-      nextLive: {
+    nextLive: {
       title: "NEXT EVENT #014",
       start: "20:30 JST",
       venue: "SECTOR HALL 02",
@@ -79,6 +79,7 @@
       actId: "act-002",
       channel: "LA_TERMINAL",
       status: "SCHEDULED",
+      flyerUrl: "",
     },
     signals: [
       {
@@ -190,6 +191,35 @@
       </svg>`;
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   };
+  const makeEventFlyer = (title, venue, date) => {
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 560" role="img" aria-label="${title}">
+        <defs>
+          <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fef4f8"/>
+            <stop offset="48%" stop-color="#ffe3ef"/>
+            <stop offset="100%" stop-color="#f4f8ff"/>
+          </linearGradient>
+          <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#dc2370" stop-opacity="0.28"/>
+            <stop offset="100%" stop-color="#38f5ff" stop-opacity="0.18"/>
+          </linearGradient>
+        </defs>
+        <rect width="420" height="560" fill="url(#bg)"/>
+        <rect x="24" y="24" width="372" height="512" fill="none" stroke="#dc2370" stroke-width="4"/>
+        <rect x="36" y="36" width="348" height="488" fill="none" stroke="#d9dce4" stroke-width="1.5"/>
+        <path d="M44 92h332" stroke="#dc2370" stroke-width="3"/>
+        <circle cx="332" cy="120" r="58" fill="url(#shine)"/>
+        <circle cx="112" cy="190" r="56" fill="rgba(220,35,112,.18)"/>
+        <circle cx="302" cy="284" r="88" fill="rgba(56,245,255,.16)"/>
+        <text x="50%" y="24%" fill="#111115" font-family="Arial, Noto Sans JP, sans-serif" font-size="28" font-weight="700" text-anchor="middle">LA_OS LIVE</text>
+        <text x="50%" y="36%" fill="#dc2370" font-family="Arial, Noto Sans JP, sans-serif" font-size="40" font-weight="800" text-anchor="middle">${title}</text>
+        <text x="50%" y="49%" fill="#111115" font-family="Arial, Noto Sans JP, sans-serif" font-size="22" font-weight="700" text-anchor="middle">${venue}</text>
+        <text x="50%" y="58%" fill="#6c7280" font-family="Arial, Noto Sans JP, sans-serif" font-size="18" text-anchor="middle">${date}</text>
+        <text x="50%" y="77%" fill="#111115" font-family="Arial, Noto Sans JP, sans-serif" font-size="16" font-weight="700" text-anchor="middle">ADMIN FLYER</text>
+      </svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  };
   state.events.forEach((event, eventIndex) => {
     event.acts.forEach((artist, actIndex) => {
       if (!artist.imageUrl) {
@@ -198,6 +228,7 @@
       }
     });
   });
+  state.nextLive.flyerUrl = state.nextLive.flyerUrl || makeEventFlyer(state.nextLive.title, state.nextLive.venue, state.events[0]?.date || "");
   const STORAGE_KEY = "la_os_member_profile_v2";
   const SESSION_MS = 60 * 60 * 1000;
   const loadProfile = () => {
@@ -478,8 +509,8 @@
   }
 
   function renderChamber() {
-    setText("#chamber-state", "STABLE");
-    setText("#chamber-depth", "DEPTH 04.2");
+    setText("#chamber-state", "準備中");
+    setText("#chamber-depth", "PREPARING");
 
     const field = $("#bubble-field");
     if (!field) return;
@@ -510,7 +541,7 @@
 
     const note = state.user.versionUpPending
       ? "進行中です。なにか起こるかもしれません。"
-      : "アーカイブ準備が整っています。";
+      : "進捗は安定しています。";
     setText("#progress-note", note);
 
     const track = $("#progress-track");
@@ -590,6 +621,11 @@
     setText("#live-venue", live.venue);
     setText("#live-act", getAct(live.eventId ?? state.events[0].eventId, live.actId).name);
     setText("#live-channel", live.channel);
+    const flyer = $("#live-flyer-image");
+    if (flyer) {
+      flyer.src = live.flyerUrl || "";
+      flyer.alt = `${live.title} フライヤー`;
+    }
   }
 
   function pickDifferentIndex(length, currentIndex) {
@@ -709,12 +745,11 @@
     if (!nav) return;
 
     const actions = [
-      { id: "home", code: "HOME", label: "ホーム" },
-      { id: "reserve", code: "YOYAKU", label: "予約" },
-      { id: "signal", code: "SIGNAL", label: "signal" },
-      { id: "danmaku", code: "DANMAKU", label: "弾幕" },
-      { id: "onbox", code: "ONBOX", label: "視聴" },
-      { id: "settings", code: "SETTINGS", label: "設定" },
+      { id: "home", code: "🏠", label: "ホーム" },
+      { id: "reserve", code: "📅", label: "予約" },
+      { id: "signal", code: "🖋️", label: "SIGNAL" },
+      { id: "onbox", code: "▶", label: "ONBOX" },
+      { id: "settings", code: "⚙️", label: "設定" },
     ];
 
     const fragment = document.createDocumentFragment();
@@ -791,9 +826,7 @@
     renderReservationCard();
     renderLiveCard();
     renderSignalCard();
-    renderDanmakuCard();
     renderQuickActions();
-    renderArchive();
   }
 
   function setReservationSummary(eventId, actId, ticketCount) {
@@ -1011,13 +1044,13 @@
     if (!list) return;
 
     const sections = [
-      ["チャンバー", "何かが起こるかもしれません(ComingSoon)"],
-      ["シンチョク", "何かが起こるかもしれません(ComingSoon)"],
-      ["コクチ", "次回イベント開催のお知らせ"],
-      ["シグナル", "アナタが推しに届けたメッセージが表示されています"],
-      ["ミンナノダンマク", "ミンナが会場に届けた弾幕が表示されています"],
-      ["リロード", "リロードすることで何かのシンチョクがあがります"],
-      ["アーカイブ", "過去のイベント映像を公開しています（会場でライセンス購入することで解禁されます。）"],
+      ["チャンバー", "準備中です。何かが起こるかもしれません。"],
+      ["シンチョク", "現在の進捗を表示しています。"],
+      ["コクチ", "次回イベントのお知らせとフライヤーを表示します。"],
+      ["予約", "予約の確認と変更ができます。"],
+      ["SIGNAL", "アーティストに感想を届けます。"],
+      ["ONBOX", "視聴用の連携先です。"],
+      ["設定", "表示名やメール情報を確認・更新できます。"],
     ];
 
     const fragment = document.createDocumentFragment();
@@ -1292,7 +1325,6 @@
       runtime.danmakuSendCounts[eventId] = used + 1;
 
       closeDialog($("#danmaku-dialog"));
-      renderDanmakuCard();
       syncDanmakuQuota();
       pulseProgress("送信内容を反映しました。");
     });
@@ -1314,7 +1346,6 @@
         state.danmaku.filter((entry) => entry.approved).length || state.danmaku.length,
         runtime.danmakuIndex
       );
-      renderDanmakuCard();
       pulseProgress("Progressを反映しました。");
       if (runtime.danmakuReloadCount >= 5) {
         setToast("Today's Progress Complete.");
@@ -1324,7 +1355,6 @@
     $("#archive-plus")?.addEventListener("click", () => {
       if (!state.user.archiveAccess) return;
       runtime.archiveExpanded = !runtime.archiveExpanded;
-      renderArchive();
       setToast(runtime.archiveExpanded ? "アーカイブを展開しました。" : "アーカイブを閉じました。");
     });
 
@@ -1374,8 +1404,6 @@
         openReservationForm("create");
       } else if (action === "signal") {
         openSignalDialog();
-      } else if (action === "danmaku") {
-        openDanmakuDialog();
       } else if (action === "onbox") {
         window.location.assign(new URL("../la-on-box/?next=watch", window.location.href).href);
         return;
@@ -1387,8 +1415,7 @@
         home: "ホームに戻りました。",
         reserve: "予約を開きました。",
         signal: "シグナルを開きました。",
-        danmaku: "DANMAKUを開きました。",
-        onbox: "LA_ON-BOXへ接続します。",
+        onbox: "ONBOXへ接続します。",
         settings: "設定を開きました。",
       };
       setToast(labels[action] ?? "");

@@ -818,7 +818,7 @@
     phases.forEach((phase) => {
       window.setTimeout(() => {
         stage.textContent = phase.text;
-        fill.style.width = phase.width;
+        fill.style.transform = `scaleX(${Number.parseFloat(phase.percent) / 100})`;
         if (percent) percent.textContent = phase.percent;
       }, phase.delay);
     });
