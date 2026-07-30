@@ -1,5 +1,5 @@
 const functions = require("firebase-functions/v1");
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 const { classifyComment } = require("./moderation");
@@ -8,6 +8,7 @@ admin.initializeApp();
 
 const db = admin.firestore();
 const APP_CHECK_ENFORCED = process.env.ENFORCE_APP_CHECK === "true";
+
 const LP_SIGNAL_DAILY_LIMIT = 3;
 const LP_SIGNAL_IP_DAILY_LIMIT = 60;
 const LP_SIGNAL_COOLDOWN_MS = 20 * 1000;
@@ -241,7 +242,7 @@ exports.submitSignal = onCall({ enforceAppCheck: APP_CHECK_ENFORCED }, async (re
 });
 
 // LP公開向けSIGNAL。会員情報やコメントを持たず、サーバー側で送信回数を制御する。
-exports.submitLpSignal = onCall({ enforceAppCheck: APP_CHECK_ENFORCED }, async (request) => {
+async function submitLpSignalHandler(request) {
   const artistId = String(request.data?.artistId || "").trim();
   const signalType = String(request.data?.signalType || "").trim();
   const guestId = String(request.data?.guestId || "").trim();
@@ -308,6 +309,39 @@ exports.submitLpSignal = onCall({ enforceAppCheck: APP_CHECK_ENFORCED }, async (
   });
 
   return { ok: true, artistId, signalType, remaining: Math.max(0, LP_SIGNAL_DAILY_LIMIT - (Number((await guestUsageRef.get()).data()?.count || 0))) };
+}
+
+function sendLpSignalError(response, error) {
+  const codeMap = {
+    "invalid-argument": [400, "INVALID_ARGUMENT"],
+    "not-found": [404, "NOT_FOUND"],
+    "resource-exhausted": [429, "RESOURCE_EXHAUSTED"],
+  };
+  const [status, callableStatus] = codeMap[error?.code] || [500, "INTERNAL"];
+  response.status(status).json({
+    error: {
+      status: callableStatus,
+      message: error?.message || "SIGNAL could not be sent.",
+    },
+  });
+}
+
+// LPはログイン不要の公開導線。Firebase Callable互換のJSON形式を返す。
+exports.submitLpSignal = onRequest({ invoker: "public", cors: true }, async (request, response) => {
+  if (request.method !== "POST") {
+    response.status(405).json({ error: { status: "INVALID_ARGUMENT", message: "POST only." } });
+    return;
+  }
+
+  try {
+    const result = await submitLpSignalHandler({
+      data: request.body?.data || {},
+      rawRequest: request,
+    });
+    response.status(200).json({ data: result });
+  } catch (error) {
+    sendLpSignalError(response, error);
+  }
 });
 
 exports.submitDanmaku = onCall({ enforceAppCheck: APP_CHECK_ENFORCED }, async (request) => {
