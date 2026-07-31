@@ -186,7 +186,10 @@
         </section>
       </main>
 
-      <p class="system-toast" id="system-toast" aria-live="polite"></p>
+      <p class="system-toast" id="system-toast" aria-live="polite">
+        <span id="system-toast-message"></span>
+        <button class="ghost-button tiny system-toast-report" id="system-toast-report" type="button" hidden>報告する</button>
+      </p>
 
       <footer class="system-footer" aria-label="Bottom navigation">
         <nav class="bottom-nav" id="bottom-nav" aria-label="Main navigation"></nav>
@@ -304,8 +307,8 @@
           <span>カンジョウ</span>
           <select id="signal-emotion-select" required></select>
         </label>
-        <div class="summary-box">送信回数: <span id="signal-limit-status">0 / 1</span></div>
-        <p class="counter-note" id="signal-limit-note">本日は1回まで送信できます。</p>
+        <div class="summary-box">送信回数: <span id="signal-limit-status">DEMO / ∞</span></div>
+        <p class="counter-note" id="signal-limit-note">デモ期間中は何度でも送信できます。</p>
         <label class="field">
           <span>コメント<small id="signal-counter">0 / 15</small></span>
           <textarea id="signal-comment" maxlength="15" rows="3"></textarea>
@@ -362,6 +365,9 @@
     <script src="./firebase-config.js"></script>
     <script src="./assets/auth.js?v=20260726i" defer></script>
     <script src="./assets/app.js?v=20260726i" defer></script>
+    <script src="../shared/danmaku-blocked-template.js"></script>
+    <script src="../shared/danmaku-moderation.js"></script>
+    <script src="../shared/error-reporting.js"></script>
     <script src="./assets/firebase-core.js?v=20260726i" defer></script>
   </body>
 </html>

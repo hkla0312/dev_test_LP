@@ -1,4 +1,4 @@
-/* global firebase, FIREBASE_CONFIG */
+﻿/* global firebase, FIREBASE_CONFIG */
 (() => {
   const $ = (selector) => document.querySelector(selector);
   const escape = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({
@@ -11,6 +11,7 @@
 
   const SIGNAL_DAILY_STORAGE_KEY = "la_os_signal_daily_limit_v1";
   const SIGNAL_DAILY_LIMIT = 1;
+  const SIGNAL_DEMO_UNLIMITED = true;
   const SIGNAL_EMOTIONS = [
     { value: "song", label: "歌が良い" },
     { value: "stage", label: "ステージが良い" },
@@ -24,6 +25,7 @@
   let currentMember = null;
   let signalSubmitBound = false;
   let danmakuSubmitBound = false;
+  let currentBackendIssue = null;
 
   function getFunctionsApi() {
     return typeof firebase.functions === "function" ? firebase.functions() : null;
@@ -54,21 +56,24 @@
 
   function syncSignalQuota() {
     const used = getSignalUsageCount();
-    const remaining = Math.max(0, SIGNAL_DAILY_LIMIT - used);
+    const remaining = SIGNAL_DEMO_UNLIMITED ? Infinity : Math.max(0, SIGNAL_DAILY_LIMIT - used);
     const quotaStatus = $("#signal-limit-status");
     const quotaNote = $("#signal-limit-note");
     const submitButton = $("#signal-submit");
 
-    if (quotaStatus) quotaStatus.textContent = `${used} / ${SIGNAL_DAILY_LIMIT}`;
+    if (quotaStatus) quotaStatus.textContent = SIGNAL_DEMO_UNLIMITED ? "DEMO / ∞" : `${used} / ${SIGNAL_DAILY_LIMIT}`;
     if (quotaNote) {
-      quotaNote.textContent = remaining > 0
+      quotaNote.textContent = SIGNAL_DEMO_UNLIMITED
+        ? "デモ期間中は何度でも送信できます。"
+        : remaining > 0
         ? "本日は1回まで送信できます。"
         : "本日の送信上限に達しています。";
     }
-    if (submitButton) submitButton.disabled = remaining <= 0;
+    if (submitButton) submitButton.disabled = !SIGNAL_DEMO_UNLIMITED && remaining <= 0;
   }
 
   function markSignalUsed() {
+    if (SIGNAL_DEMO_UNLIMITED) return;
     try {
       localStorage.setItem(signalStorageKey(), JSON.stringify({
         date: tokyoDateKey(),
@@ -86,9 +91,87 @@
     window.setTimeout(() => card.classList.remove("is-pulse"), 420);
   }
 
-  function toast(message) {
+  function buildBackendIssue(error, area, action, context = {}) {
+    const helper = window.LAErrorReporting;
+    const classified = helper?.classifyError
+      ? helper.classifyError(error, {
+          source: "laos",
+          area,
+          action,
+        })
+      : null;
+
+    return {
+      message: helper?.formatUserMessage
+        ? helper.formatUserMessage(error, {
+            source: "laos",
+            area,
+            action,
+            actionLabel: action,
+          })
+        : `${action}に失敗しました。`,
+      reportable: Boolean(classified?.reportable),
+      code: classified?.code || String(error?.code || ""),
+      error,
+      area,
+      action,
+      context,
+    };
+  }
+
+  function toast(message, issue = null) {
     const node = $("#system-toast");
+    const reportButton = $("#system-toast-report");
     if (node) node.textContent = message;
+    currentBackendIssue = issue?.reportable ? issue : null;
+    if (reportButton) {
+      reportButton.hidden = !currentBackendIssue;
+      reportButton.onclick = currentBackendIssue ? reportBackendIssue : null;
+    }
+  }
+
+  async function reportBackendIssue() {
+    if (!currentBackendIssue?.reportable) {
+      return;
+    }
+
+    const functionsApi = getFunctionsApi();
+    if (!functionsApi) {
+      toast("報告機能の準備ができていません。");
+      return;
+    }
+
+    try {
+      const callable = functionsApi.httpsCallable("reportBackendError");
+      const helper = window.LAErrorReporting;
+      const payload = helper?.buildReportPayload
+        ? helper.buildReportPayload(currentBackendIssue.error, {
+            source: "laos",
+            area: currentBackendIssue.area,
+            action: currentBackendIssue.action,
+            pageUrl: window.location.href,
+            ...currentBackendIssue.context,
+          })
+        : {
+            source: "laos",
+            area: currentBackendIssue.area,
+            action: currentBackendIssue.action,
+            pageUrl: window.location.href,
+            errorCode: currentBackendIssue.code || "BACKEND_UNKNOWN",
+            errorCategory: "backend",
+            message: currentBackendIssue.message,
+          };
+      await callable(payload);
+      currentBackendIssue = null;
+      toast("報告を送信しました。");
+    } catch (error) {
+      toast(
+        error?.code === "permission-denied"
+          ? "報告の送信権限がありません。"
+          : "報告の送信に失敗しました。"
+      );
+      console.error("backend report error", error);
+    }
   }
 
   function refreshSignalForm() {
@@ -172,7 +255,7 @@
     }
 
     const artist = artistSnapshot.data() || {};
-    await db.collection("artistSignals").add({
+    const ref = await db.collection("artistSignals").add({
       artistId,
       artistKey: artist.artistKey || artistId,
       artistName: artist.name || artist.artistKey || artistId,
@@ -190,6 +273,16 @@
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
+    return {
+      signalId: ref.id,
+      artistId,
+      artistName: artist.name || artist.artistKey || artistId,
+      artistThumbnailUrl: artist.thumbnailUrl || artist.imageUrl || "",
+      signalType,
+      signalLabel: SIGNAL_EMOTIONS.find((item) => item.value === signalType)?.label || signalType,
+      comment,
+      commentSummary: comment.length > 18 ? `${comment.slice(0, 18)}…` : comment,
+    };
   }
 
   async function submitSignal(event) {
@@ -205,7 +298,7 @@
       toast("現在この機能は一時停止中です");
       return;
     }
-    if (used >= SIGNAL_DAILY_LIMIT) {
+    if (!SIGNAL_DEMO_UNLIMITED && used >= SIGNAL_DAILY_LIMIT) {
       toast("本日の送信上限に達しています。");
       syncSignalQuota();
       return;
@@ -216,12 +309,14 @@
 
     const functionsApi = getFunctionsApi();
     try {
+      let result = null;
       if (functionsApi) {
         const callable = functionsApi.httpsCallable("submitSignal");
-        await callable({ artistId, signalType, comment });
+        result = await callable({ artistId, signalType, comment });
       } else {
-        await writeSignalFallback(firebase.firestore(), currentUser, artistId, signalType, comment);
+        result = await writeSignalFallback(firebase.firestore(), currentUser, artistId, signalType, comment);
       }
+      const payload = result?.data || result || {};
 
       const timestampText = new Date().toLocaleString("ja-JP", {
         year: "numeric",
@@ -235,14 +330,24 @@
       markSignalUsed();
       syncSignalQuota();
       flashProgressPulse();
+      window.dispatchEvent(new CustomEvent("laos-signal-submitted", {
+        detail: {
+          ...payload,
+          artistId,
+          signalType,
+          comment,
+          timestamp: `${timestampText} JST`,
+        },
+      }));
       toast("SIGNALを送信しました。");
       $("#signal-comment") && ($("#signal-comment").value = "");
       $("#signal-dialog")?.close();
     } catch (error) {
-      const errorText = error?.code === "permission-denied"
-        ? "SIGNALを送信する権限がありません。"
-        : "SIGNALの送信に失敗しました。";
-      toast(errorText);
+      const issue = buildBackendIssue(error, "signal", "SIGNAL送信", {
+        artistId,
+        signalType,
+      });
+      toast(issue.message, issue);
       console.error("SIGNAL送信エラー", error);
     }
   }
@@ -270,10 +375,10 @@
         if (quotaStatus) quotaStatus.textContent = `${5 - result.data.remaining} / 5`;
       }
     } catch (error) {
-      const toastText = error?.code === "permission-denied"
-        ? "DANMAKUを送信する権限がありません。"
-        : "DANMAKUの送信に失敗しました。";
-      toast(toastText);
+      const issue = buildBackendIssue(error, "danmaku", "DANMAKU送信", {
+        senderMode,
+      });
+      toast(issue.message, issue);
       console.error("DANMAKU送信エラー", error);
     }
   }
@@ -298,7 +403,8 @@
         systemSettings = { signalEnabled: true, systemEnabled: true, ...(snapshot.exists ? snapshot.data() : {}) };
       },
       (error) => {
-        toast("機能設定の読み込みに失敗しました。");
+        const issue = buildBackendIssue(error, "settings", "機能設定の読み込み");
+        toast(issue.message, issue);
         console.error("system settings snapshot error", error);
       }
     );
@@ -317,7 +423,11 @@
           }));
           refreshSignalForm();
         },
-        (error) => console.error("artist snapshot error", error)
+        (error) => {
+          const issue = buildBackendIssue(error, "artists", "アーティスト一覧の読み込み");
+          toast(issue.message, issue);
+          console.error("artist snapshot error", error);
+        }
       );
   }
 

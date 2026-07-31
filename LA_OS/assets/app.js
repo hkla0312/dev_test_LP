@@ -642,9 +642,40 @@
     if (!signals.length) return;
     runtime.signalIndex = clamp(runtime.signalIndex, 0, signals.length - 1);
     const signal = signals[runtime.signalIndex];
-    setText("#signal-message", signal.comment);
+    setText("#signal-message", signal.commentSummary || signal.comment);
     setText("#signal-target", signal.artistName ?? signal.actName ?? "ARTIST");
     setText("#signal-time", signal.timestamp);
+  }
+
+  function applySubmittedSignal(detail = {}) {
+    const artistId = String(detail.artistId || detail.actId || "").trim();
+    const artistName = String(detail.artistName || detail.artist || "ARTIST").trim() || "ARTIST";
+    const comment = String(detail.comment || "").trim();
+    const commentSummary = String(detail.commentSummary || summarizeSignalComment(comment, detail.signalLabel || detail.emotionLabel || ""));
+    const timestamp = String(detail.timestamp || nowLabel()).trim();
+    const nextSignal = {
+      signalId: String(detail.signalId || makeId("SIG")),
+      eventId: String(detail.eventId || ""),
+      actId: artistId,
+      artistName,
+      artistImageUrl: String(detail.artistThumbnailUrl || detail.artistImageUrl || ""),
+      emotion: String(detail.signalType || detail.emotion || "song"),
+      emotionLabel: String(detail.signalLabel || detail.emotionLabel || "歌が良い"),
+      comment,
+      commentSummary,
+      timestamp,
+    };
+
+    state.signals = [nextSignal, ...state.signals.filter((item) => item.signalId !== nextSignal.signalId)];
+    runtime.signalIndex = 0;
+    renderSignalCard();
+  }
+
+  function summarizeSignalComment(comment, emotionLabel = "") {
+    const raw = String(comment ?? "").normalize("NFKC").replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
+    const cleaned = raw.replace(/[「」『』“”"'`]/g, "").replace(/[。！？!?]+$/g, "");
+    if (!cleaned) return emotionLabel || "SIGNAL";
+    return cleaned.length > 18 ? `${cleaned.slice(0, 18)}…` : cleaned;
   }
 
   const SIGNAL_EMOTIONS = [
@@ -654,11 +685,29 @@
     { value: "other", label: "そのほか" },
   ];
 
+  function getSignalArtistList() {
+    const published = Array.isArray(window.LAOS_SIGNAL_ARTISTS) ? window.LAOS_SIGNAL_ARTISTS : [];
+    if (published.length) {
+      return published.map((artist) => ({
+        source: "admin",
+        id: artist.id,
+        name: artist.name || "ARTIST",
+        imageUrl: artist.imageUrl || artist.thumbnailUrl || "",
+        eventId: artist.eventId || "",
+        actId: artist.actId || "",
+      }));
+    }
+
+    return [];
+  }
+
   function getSignalArtist(value) {
-    const [eventId, actId] = String(value || "").split("::");
-    const event = state.events.find((item) => item.eventId === eventId) ?? state.events[0];
-    const artist = event?.acts.find((item) => item.actId === actId) ?? event?.acts[0];
-    return { event, artist };
+    const artistList = getSignalArtistList();
+    const selected = artistList.find((artist) => artist.id === value);
+    if (selected) {
+      return { event: null, artist: selected };
+    }
+    return { event: null, artist: null };
   }
 
   function renderSignalArtistPreview() {
@@ -669,7 +718,7 @@
 
     const { artist } = getSignalArtist(select.value);
     const label = artist?.name ?? "ARTIST";
-    const imageUrl = artist?.imageUrl || "";
+    const imageUrl = artist?.imageUrl || artist?.thumbnailUrl || "";
 
     name.textContent = label;
     thumb.classList.toggle("has-image", Boolean(imageUrl));
@@ -679,6 +728,7 @@
   }
 
   const SIGNAL_DAILY_LIMIT = 1;
+  const SIGNAL_DEMO_UNLIMITED = true;
   const SIGNAL_DAILY_STORAGE_KEY = "la_os_signal_daily_limit_v1";
   const getTokyoDateKey = () =>
     new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
@@ -697,18 +747,21 @@
   };
   const syncSignalDailyQuota = () => {
     const used = getSignalDailyUsage();
-    const remaining = Math.max(0, SIGNAL_DAILY_LIMIT - used);
+    const remaining = SIGNAL_DEMO_UNLIMITED ? Infinity : Math.max(0, SIGNAL_DAILY_LIMIT - used);
     const quotaStatus = $("#signal-limit-status");
     const quotaNote = $("#signal-limit-note");
     const submitButton = $("#signal-submit");
 
-    if (quotaStatus) quotaStatus.textContent = `${used} / ${SIGNAL_DAILY_LIMIT}`;
-    if (quotaNote) quotaNote.textContent = remaining > 0
+    if (quotaStatus) quotaStatus.textContent = SIGNAL_DEMO_UNLIMITED ? "DEMO / ∞" : `${used} / ${SIGNAL_DAILY_LIMIT}`;
+    if (quotaNote) quotaNote.textContent = SIGNAL_DEMO_UNLIMITED
+      ? "デモ期間中は何度でも送信できます。"
+      : remaining > 0
       ? "本日は1回まで送信できます。"
       : "本日の送信上限に達しています。";
-    if (submitButton) submitButton.disabled = remaining <= 0;
+    if (submitButton) submitButton.disabled = !SIGNAL_DEMO_UNLIMITED && remaining <= 0;
   };
   const markSignalDailyUsed = () => {
+    if (SIGNAL_DEMO_UNLIMITED) return;
     try {
       localStorage.setItem(getSignalDailyStorageKey(), JSON.stringify({
         date: getTokyoDateKey(),
@@ -966,18 +1019,15 @@
     const comment = $("#signal-comment");
 
     if (select) {
-      const artists = state.events.flatMap((event) =>
-        event.acts.map((artist) => ({
-          eventId: event.eventId,
-          actId: artist.actId,
-          name: artist.name,
-          imageUrl: artist.imageUrl || "",
-        }))
-      );
+      const artists = getSignalArtistList();
       select.replaceChildren(
-        ...artists.map((artist) => makeOption(`${artist.eventId}::${artist.actId}`, artist.name))
+        ...(artists.length
+          ? artists.map((artist) => makeOption(artist.id, artist.name))
+          : [makeOption("", "Adminのアーティスト同期を待機中")]
+        )
       );
-      select.value = artists[0] ? `${artists[0].eventId}::${artists[0].actId}` : "";
+      select.value = artists[0]?.id || "";
+      select.disabled = !artists.length;
     }
 
     if (emotionSelect && !emotionSelect.options.length) {
@@ -1244,27 +1294,32 @@
       const comment = $("#signal-comment");
       const used = getSignalDailyUsage();
       if (!select || !emotionSelect || !comment) return;
-      if (used >= SIGNAL_DAILY_LIMIT) {
+      if (!SIGNAL_DEMO_UNLIMITED && used >= SIGNAL_DAILY_LIMIT) {
         setToast("本日の送信上限に達しています。");
         syncSignalDailyQuota();
         return;
       }
 
-      const [eventId, actId] = String(select.value).split("::");
+      const selectedValue = String(select.value);
       const { event: signalEvent, artist } = getSignalArtist(select.value);
       const emotion = SIGNAL_EMOTIONS.find((item) => item.value === emotionSelect.value) ?? SIGNAL_EMOTIONS[0];
       const message = comment.value.trim();
       if (!message) return;
+      if (!artist?.id) {
+        setToast("アーティスト一覧の同期を待っています。");
+        return;
+      }
 
       state.signals.unshift({
         signalId: makeId("SIG"),
-        eventId: eventId || signalEvent?.eventId || state.events[0].eventId,
-        actId: artist?.actId ?? actId ?? select.value,
+        eventId: signalEvent?.eventId || "",
+        actId: artist.id || selectedValue,
         artistName: artist?.name ?? select.options[select.selectedIndex]?.textContent ?? "ARTIST",
         artistImageUrl: artist?.imageUrl || "",
         emotion: emotion.value,
         emotionLabel: emotion.label,
         comment: message,
+        commentSummary: summarizeSignalComment(message, emotion.label),
         timestamp: nowLabel(),
       });
 
@@ -1278,6 +1333,15 @@
     $("#signal-artist-select")?.addEventListener("change", renderSignalArtistPreview);
     $("#signal-emotion-select")?.addEventListener("change", () => {});
     $("#signal-comment")?.addEventListener("input", updateSignalCounter);
+    window.addEventListener("laos-signal-submitted", (event) => {
+      applySubmittedSignal(event.detail || {});
+      pulseProgress("Progressを反映しました。");
+    });
+    window.addEventListener("laos-signal-artists-updated", () => {
+      if ($("#signal-dialog")?.open) {
+        openSignalDialog();
+      }
+    });
 
     $("#danmaku-close")?.addEventListener("click", () => closeDialog($("#danmaku-dialog")));
     $("#danmaku-dialog")?.addEventListener("change", (event) => {
