@@ -1,5 +1,6 @@
 ﻿/* global firebase, FIREBASE_CONFIG */
 (() => {
+  window.LAOS_SIGNAL_BACKEND_ACTIVE = true;
   const $ = (selector) => document.querySelector(selector);
   const escape = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({
     "&": "&amp;",
@@ -16,7 +17,6 @@
     { value: "song", label: "歌が良い" },
     { value: "stage", label: "ステージが良い" },
     { value: "character", label: "キャラが良い" },
-    { value: "other", label: "そのほか" },
   ];
 
   let publishedArtists = [];

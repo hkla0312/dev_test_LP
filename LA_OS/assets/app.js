@@ -679,10 +679,9 @@
   }
 
   const SIGNAL_EMOTIONS = [
-    { value: "good-vocals", label: "歌が良い" },
-    { value: "good-stage", label: "ステージが良い" },
-    { value: "good-character", label: "キャラが良い" },
-    { value: "other", label: "そのほか" },
+    { value: "song", label: "歌が良い" },
+    { value: "stage", label: "ステージが良い" },
+    { value: "character", label: "キャラが良い" },
   ];
 
   function getSignalArtistList() {
@@ -1032,7 +1031,7 @@
 
     if (emotionSelect && !emotionSelect.options.length) {
       emotionSelect.replaceChildren(...SIGNAL_EMOTIONS.map((emotion) => makeOption(emotion.value, emotion.label)));
-      emotionSelect.value = "good-vocals";
+      emotionSelect.value = "song";
     }
 
     if (comment) {
@@ -1289,6 +1288,8 @@
     $("#signal-close")?.addEventListener("click", () => closeDialog($("#signal-dialog")));
     $("#signal-form")?.addEventListener("submit", (event) => {
       event.preventDefault();
+      // 保存はfirebase-core.jsに集約し、この旧ローカル処理では擬似成功を作らない。
+      if (window.LAOS_SIGNAL_BACKEND_ACTIVE !== false) return;
       const select = $("#signal-artist-select");
       const emotionSelect = $("#signal-emotion-select");
       const comment = $("#signal-comment");

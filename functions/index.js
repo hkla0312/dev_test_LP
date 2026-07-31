@@ -186,13 +186,62 @@ exports.createMemberProfileOnAuthCreate = functions.auth.user().onCreate(async (
   return null;
 });
 
-exports.submitSignal = onCall({ enforceAppCheck: APP_CHECK_ENFORCED }, async (request) => {
+exports.reportBackendError = onCall({ enforceAppCheck: APP_CHECK_ENFORCED }, async (request) => {
+  const source = String(request.data?.source || "laos").trim().slice(0, 30);
+  const area = String(request.data?.area || "system").trim().slice(0, 60);
+  const action = String(request.data?.action || "処理").trim().slice(0, 60);
+  const errorCode = String(request.data?.errorCode || "LAOS-UNK-001").trim().slice(0, 40);
+  const errorCategory = String(request.data?.errorCategory || "backend").trim().slice(0, 30);
+  const message = String(request.data?.message || "処理に失敗しました。").trim().slice(0, 240);
+  const rawCode = String(request.data?.rawCode || "").trim().slice(0, 80);
+  const rawMessage = String(request.data?.rawMessage || "").trim().slice(0, 500);
+  const pageUrl = String(request.data?.pageUrl || "").trim().slice(0, 400);
+  const context = request.data?.context && typeof request.data.context === "object" ? request.data.context : {};
+  const member = request.auth?.uid ? await loadMemberProfile(request.auth.uid) : null;
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const ref = db.collection("errorReports").doc();
+  const record = {
+    source,
+    area,
+    action,
+    errorCode,
+    errorCategory,
+    message,
+    rawCode,
+    rawMessage,
+    pageUrl,
+    memberUid: request.auth?.uid || "",
+    memberId: String(request.data?.memberId || member?.memberId || "").trim().slice(0, 24),
+    displayName: String(request.data?.displayName || member?.displayName || request.auth?.token?.name || "").trim().slice(0, 60),
+    email: String(request.data?.email || member?.email || request.auth?.token?.email || "").trim().slice(0, 120),
+    status: "new",
+    context,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await ref.set(record);
+  await db.collection("adminLogs").add({
+    actionType: "ERROR_REPORT_CREATE",
+    targetType: "errorReport",
+    targetId: ref.id,
+    targetLabel: `${source}/${errorCode}`,
+    detail: `${area} / ${action}`,
+    adminUid: request.auth?.uid || "system",
+    adminDisplayName: member?.displayName || request.auth?.token?.name || "SYSTEM",
+    createdAt: now,
+  });
+
+  return { ok: true, reportId: ref.id };
+});
+
+async function submitMemberSignalHandler(request) {
   if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Login required.");
 
   const artistId = String(request.data?.artistId || "").trim();
   const signalType = String(request.data?.signalType || "").trim();
   const comment = String(request.data?.comment || "").trim().slice(0, 15);
-  if (!artistId || !["song", "stage", "character", "other"].includes(signalType) || !comment) {
+  if (!artistId || !["song", "stage", "character"].includes(signalType) || !comment) {
     throw new HttpsError("invalid-argument", "Invalid signal.");
   }
 
@@ -238,8 +287,18 @@ exports.submitSignal = onCall({ enforceAppCheck: APP_CHECK_ENFORCED }, async (re
   };
 
   const ref = await db.collection("artistSignals").add(record);
-  return { ok: true, signalId: ref.id, artistId, artistName: record.artistName, signalType, comment };
-});
+  return {
+    ok: true,
+    signalId: ref.id,
+    artistId,
+    artistName: record.artistName,
+    artistThumbnailUrl: record.artistThumbnailUrl,
+    signalType,
+    signalLabel: record.signalLabel,
+    comment,
+    commentSummary: record.commentSummary,
+  };
+}
 
 // LP公開向けSIGNAL。会員情報やコメントを持たず、サーバー側で送信回数を制御する。
 async function submitLpSignalHandler(request) {
@@ -311,10 +370,12 @@ async function submitLpSignalHandler(request) {
   return { ok: true, artistId, signalType, remaining: Math.max(0, LP_SIGNAL_DAILY_LIMIT - (Number((await guestUsageRef.get()).data()?.count || 0))) };
 }
 
-function sendLpSignalError(response, error) {
+function sendCallableError(response, error) {
   const codeMap = {
+    unauthenticated: [401, "UNAUTHENTICATED"],
     "invalid-argument": [400, "INVALID_ARGUMENT"],
     "not-found": [404, "NOT_FOUND"],
+    "failed-precondition": [400, "FAILED_PRECONDITION"],
     "resource-exhausted": [429, "RESOURCE_EXHAUSTED"],
   };
   const [status, callableStatus] = codeMap[error?.code] || [500, "INTERNAL"];
@@ -325,6 +386,28 @@ function sendLpSignalError(response, error) {
     },
   });
 }
+
+async function authenticatedCallableRequest(request) {
+  const authorization = String(request.get("authorization") || "");
+  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) throw new HttpsError("unauthenticated", "Login required.");
+  const decoded = await admin.auth().verifyIdToken(token);
+  return { data: request.body?.data || {}, auth: { uid: decoded.uid, token: decoded }, rawRequest: request };
+}
+
+// LA_OSの会員SIGNAL。Firebase Callable互換の公開HTTP入口で、IDトークンを検証する。
+exports.submitSignal = onRequest({ invoker: "public", cors: true }, async (request, response) => {
+  if (request.method !== "POST") {
+    response.status(405).json({ error: { status: "INVALID_ARGUMENT", message: "POST only." } });
+    return;
+  }
+  try {
+    const result = await submitMemberSignalHandler(await authenticatedCallableRequest(request));
+    response.status(200).json({ data: result });
+  } catch (error) {
+    sendCallableError(response, error);
+  }
+});
 
 // LPはログイン不要の公開導線。Firebase Callable互換のJSON形式を返す。
 exports.submitLpSignal = onRequest({ invoker: "public", cors: true }, async (request, response) => {
@@ -340,7 +423,7 @@ exports.submitLpSignal = onRequest({ invoker: "public", cors: true }, async (req
     });
     response.status(200).json({ data: result });
   } catch (error) {
-    sendLpSignalError(response, error);
+    sendCallableError(response, error);
   }
 });
 
