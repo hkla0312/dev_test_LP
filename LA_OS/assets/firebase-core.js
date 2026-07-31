@@ -294,6 +294,10 @@
     const comment = $("#signal-comment")?.value.trim() || "";
     const used = getSignalUsageCount();
 
+    if (!currentUser || !currentMember) {
+      toast("ログイン状態を確認中です。数秒後にもう一度お試しください。");
+      return;
+    }
     if (!systemSettings.systemEnabled || !systemSettings.signalEnabled) {
       toast("現在この機能は一時停止中です");
       return;
@@ -438,6 +442,10 @@
     }
   }
 
+  // フォームは先に登録し、ログイン情報の到着を待つ間も無反応にしない。
+  bindSignalForm();
+  bindSignalOpenPreview();
+
   firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) return;
     if (!firebase.apps.length) return;
@@ -446,9 +454,7 @@
     await loadCurrentMember(user);
     watchSystemSettings(db);
     watchPublishedArtists(db);
-    bindSignalForm();
     bindDanmakuForm();
-    bindSignalOpenPreview();
     refreshSignalForm();
   });
 })();
