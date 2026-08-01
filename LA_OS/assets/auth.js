@@ -74,6 +74,12 @@
     const fallback = String(error?.message || '不明なエラー');
     const map = {
       'auth/email-already-in-use': 'このメールアドレスはすでに使われています。',
+      'auth/email-already-exists': 'このメールアドレスはすでに使われています。',
+      'functions/already-exists': 'このメールアドレスはすでに使われています。',
+      'functions/invalid-argument': '入力内容をご確認ください。',
+      'functions/permission-denied': '保存権限がありません。',
+      'functions/resource-exhausted': 'しばらく時間をおいてください。',
+      'functions/failed-precondition': '必要な準備がまだ完了していません。',
       'auth/invalid-email': 'メールアドレスの形式をご確認ください。',
       'auth/weak-password': 'パスワードの条件をご確認ください。',
       'auth/user-not-found': '会員情報が見つかりません。',
@@ -386,11 +392,10 @@
     return adapter;
   };
 
-  const persistSession = (profile, secret = '') => {
+  const persistSession = (profile) => {
     const expiresAt = Date.now() + SESSION_MS;
     saveProfile({
       ...profile,
-      secret,
       expiresAt,
     });
 
@@ -653,6 +658,12 @@
     const fallback = String(error?.message || '不明なエラー');
     const map = {
       'auth/email-already-in-use': 'このメールアドレスはすでに使用されています。',
+      'auth/email-already-exists': 'このメールアドレスはすでに使用されています。',
+      'functions/already-exists': 'このメールアドレスはすでに使用されています。',
+      'functions/invalid-argument': '入力内容を確認してください。',
+      'functions/permission-denied': '保存権限がありません。',
+      'functions/resource-exhausted': 'しばらく時間をおいてください。',
+      'functions/failed-precondition': '必要な準備がまだ完了していません。',
       'auth/invalid-email': 'メールアドレスの形式を確認してください。',
       'auth/weak-password': 'パスワードの条件を満たしてください。',
       'auth/user-not-found': '該当する会員情報が見つかりません。',
