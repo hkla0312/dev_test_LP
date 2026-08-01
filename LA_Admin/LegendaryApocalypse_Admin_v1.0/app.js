@@ -8,6 +8,7 @@
   const timestampText = value => value && value.toDate ? value.toDate().toLocaleString('ja-JP') : (value || '—');
   const serverTime = () => firebase.firestore.FieldValue.serverTimestamp();
   const ADMIN_LOGIN_URL = localStorage.getItem('la-admin-login-url') || 'login/index.html';
+  const ARTIST_THEME_COLOR_ENDPOINT = 'https://us-central1-laconsole-12985.cloudfunctions.net/generateArtistThemeColors';
   const SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000;
   let sessionTimer = null;
   const state = {
@@ -206,16 +207,15 @@
   async function generateArtistThemeColors() {
     const targets = state.data.artists.filter(artist => artistImageUrl(artist));
     if (!targets.length) { toast('画像が登録されたアーティストがいません。', true); return; }
-    let updated = 0, failed = 0;
-    setBanner(`テーマカラーを生成中：0 / ${targets.length}`);
-    for (let index = 0; index < targets.length; index += 1) {
-      const artist = targets[index];
-      try { const imageUrl = artistImageUrl(artist); const color = await themeColorFromUrl(imageUrl); await state.db.collection('artists').doc(artist.id).update({ imageUrl, imageThemeColor: color, updatedAt: serverTime() }); updated += 1; }
-      catch (error) { failed += 1; console.warn('画像テーマカラーを生成できませんでした。', artist.id, error); }
-      setBanner(`テーマカラーを生成中：${index + 1} / ${targets.length}`);
-    }
-    setBanner(''); await adminLog('ARTIST_THEME_COLOR_GENERATE', 'artist', '', `${updated}/${targets.length}`, '登録済み画像からテーマカラーを一括生成');
-    toast(failed ? `${updated}件を更新しました。${failed}件は画像を読み込めず未変更です。` : `${updated}件のテーマカラーを更新しました。`);
+    setBanner(`テーマカラーを生成中：${targets.length}件`);
+    const token = await state.user.getIdToken();
+    const response = await fetch(ARTIST_THEME_COLOR_ENDPOINT, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body:JSON.stringify({ data:{ artistIds:targets.map(artist => artist.id) } }) });
+    const payload = await response.json().catch(() => ({}));
+    setBanner('');
+    if (!response.ok) throw new Error(payload?.error?.message || 'theme-color-generation-failed');
+    const result = payload.data || {};
+    await adminLog('ARTIST_THEME_COLOR_GENERATE', 'artist', '', `${Number(result.updated || 0)}/${targets.length}`, '登録済み画像からテーマカラーを一括生成');
+    toast(Number(result.failed || 0) ? `${Number(result.updated || 0)}件を更新しました。${Number(result.failed || 0)}件は画像URLを確認してください。` : `${Number(result.updated || 0)}件のテーマカラーを更新しました。`);
   }
   function openEvent(event) {
     const isNew = !event; const draft = event ? { ...event, artistIds: [...(event.artistIds || [])] } : { artistIds: [], lpVisible: true };
