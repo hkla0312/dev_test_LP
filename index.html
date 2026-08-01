@@ -12,14 +12,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="v002-refinements.css">
+  <link rel="stylesheet" href="v002-refinements.css?v=20260802c">
 </head>
 <body>
   <header class="site-header" id="home">
     <a class="wordmark" href="#home" aria-label="LA_TERMINAL ホームへ"><img class="wordmark__image" src="assets/la-terminal-logo.png" alt="LA_TERMINAL CONNECT. CREATE. EVOLVE."></a>
     <button class="menu-button" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="site-nav"><i></i><i></i></button>
     <nav class="site-nav" id="site-nav" aria-label="メインナビゲーション">
-      <a href="#event">EVENT</a><a href="#artist">ARTIST</a><a href="#identity">IDENTITY</a><a href="#system">SYSTEM</a><a href="#laos">LA_OS</a><a href="#contact">CONTACT</a>
+      <a href="#event">EVENT</a><a href="#artist">ARTIST</a><a href="#identity">IDENTITY</a><a href="#system">SYSTEM</a><a href="#laos">LA_OS</a><a href="#signal">SIGNAL</a><a href="#contact">CONTACT</a>
       <a class="nav-login" id="header-login-link" href="LA_OS/member/index.html">LOGIN</a>
     </nav>
   </header>
@@ -60,11 +60,11 @@
     </section>
 
     <section class="section-shell section" id="system" aria-labelledby="system-heading">
-      <header class="section-heading"><p class="kicker">LIVE SYSTEM</p><h2 id="system-heading">ライブ体験を拡張するシステム</h2></header>
+      <header class="section-heading"><p class="kicker">LIVE SYSTEM</p><h2 id="system-heading">ライブ体験をより楽しく</h2></header>
       <div class="system-grid">
-        <article class="system-card"><span class="system-card__index">01</span><h3>LA_OS</h3><p>会員システム</p><ul><li>予約</li><li>SIGNAL</li><li>DANMAKU</li><li>Archive</li><li>メンバーランクシステム</li><li>観測生命体</li></ul><a href="#laos">LA_OSについて <b>›</b></a></article>
-        <article class="system-card"><span class="system-card__index">02</span><h3>LA_ONBOX <small>(開発中)</small></h3><p>オンライン音声ライブ</p><ul><li>音声配信</li><li>コメント / DANMAKU</li><li>Archive</li><li>毎月開催</li></ul><span class="system-card__closed">- CLOSED -</span></article>
-        <article class="system-card"><span class="system-card__index">03</span><h3>LegendaryApocalypse</h3><p>リアルライブ</p><ul><li>ライブ / 物販 / 交流</li><li>CHEER UP</li><li>SIGNAL / DANMAKU</li></ul><a href="#event">イベントを見る <b>›</b></a></article>
+        <article class="system-card"><span class="system-card__index">01</span><h3>LA_OS</h3><p>会員システム</p><ul><li>簡単来場予約</li><li>SIGNAL</li><li>アーカイブ（ライセンス購入式）</li><li>メンバーランク</li><li>観測生命体...?</li></ul><a href="#laos">LA_OSについて <b>›</b></a></article>
+        <article class="system-card"><span class="system-card__index">02</span><h3>LA_ONBOX <small>(開発中)</small></h3><p>オンライン音声ライブイベント</p><ul><li>定期の音声配信</li><li>DANMAKU式コメント</li></ul><span class="system-card__closed">- CLOSED -</span></article>
+        <article class="system-card"><span class="system-card__index">03</span><h3>LegendaryApocalypse</h3><p>リアルライブイベント</p><ul><li>ライブ / 物販 / 交流</li><li>アーティストを体感</li></ul><a href="#event">イベントを見る <b>›</b></a></article>
       </div>
     </section>
 
@@ -74,7 +74,7 @@
     </section>
 
     <section class="section-shell section signal" id="signal" aria-labelledby="signal-heading">
-      <div class="signal__monolith" aria-hidden="true"><div class="monolith monolith--signal"></div></div><div><p class="kicker">SIGNAL</p><h2 id="signal-heading">感情を、活動の力に。</h2><p>ライブで受け取った感情は、アーティストの次の挑戦を支えるSIGNALになります。</p><p class="signal__copy">直感が育てるアーティストページ。<br>あなたが贈ったアーティストへの感情は、アーティストにSIGNALとして届く。<br>LA_Terminalでは、あなたの手によってアーティスト情報が作られていきます。</p><button id="signal-all-artists-button" class="text-action signal__all-artists" type="button">アーティスト一覧 <b>›</b></button><form id="signal-form" class="signal-form" aria-label="SIGNAL送信画面"><label><span>SELECT ARTIST</span><select id="signal-artist-select" required><option value="">アーティストを選択</option></select></label><div><span>SELECT SIGNAL</span><button type="button" data-signal="song" aria-pressed="false">歌が良い</button><button type="button" data-signal="stage" aria-pressed="false">ステージが良い</button><button type="button" data-signal="character" aria-pressed="false">キャラが良い</button></div><button class="signal-form__bar" type="submit"><span>SEND SIGNAL</span><b>›</b></button><output id="signal-status" aria-live="polite"></output></form><p class="signal__note">SIGNAL送信は1日3回までです。<br>※テスト運用となります。予告なく会員専用機能にシフトする場合があります。</p></div>
+      <div class="signal__monolith" aria-hidden="true"><div class="monolith monolith--signal"></div></div><div><p class="kicker">SIGNAL</p><h2 id="signal-heading">感情を、活動の力に。</h2><p>ライブで受け取った感情は、アーティストの次の挑戦を支えるSIGNALになります。</p><p class="signal__copy">直感が育てるアーティストページ。<br>あなたが贈ったアーティストへの感情は、アーティストにSIGNALとして届く。<br>LA_Terminalでは、あなたの手によってアーティスト情報が作られていきます。</p><button id="signal-all-artists-button" class="text-action signal__all-artists" type="button">アーティスト一覧 <b>›</b></button><form id="signal-form" class="signal-form" aria-label="SIGNAL送信画面"><label><span>SELECT ARTIST</span><select id="signal-artist-select" required><option value="">アーティストを選択</option></select></label><div><span>SELECT SIGNAL</span><button type="button" data-signal="song" aria-pressed="false">歌が良い</button><button type="button" data-signal="stage" aria-pressed="false">ステージが良い</button><button type="button" data-signal="character" aria-pressed="false">キャラが良い</button></div><button class="signal-form__bar" type="submit"><span>SEND SIGNAL</span><b>›</b></button><output id="signal-status" aria-live="polite"></output></form><p class="signal__note">SIGNAL送信は1日3回までです。<br>※デモバージョンです。会員専用SIGNALではアーティストにメッセージが届き、それもまたアーティストページの変化につながります。</p></div>
     </section>
 
     <section class="section-shell section contact" id="contact" aria-labelledby="contact-heading">
@@ -82,13 +82,13 @@
     </section>
   </main>
 
-  <footer class="site-footer"><a class="wordmark wordmark--footer" href="#home"><img class="wordmark__image" src="assets/la-terminal-logo-white.png" alt="LA_TERMINAL CONNECT. CREATE. EVOLVE."></a><div><a href="#event">EVENT</a><a href="#artist">ARTIST</a><a href="#identity">IDENTITY</a><a href="#system">SYSTEM</a><a href="#laos">LA_OS</a><a href="#contact">CONTACT</a></div><div class="site-footer__meta"><a id="footer-x-link" href="https://x.com/Dancho_RealJP" target="_blank" rel="noopener noreferrer">X</a><span>© LA_Terminal. All rights reserved.</span></div></footer>
+  <footer class="site-footer"><a class="wordmark wordmark--footer" href="#home"><img class="wordmark__image" src="assets/la-terminal-logo-white.png" alt="LA_TERMINAL CONNECT. CREATE. EVOLVE."></a><div><a href="#event">EVENT</a><a href="#artist">ARTIST</a><a href="#identity">IDENTITY</a><a href="#system">SYSTEM</a><a href="#laos">LA_OS</a><a href="#signal">SIGNAL</a><a href="#contact">CONTACT</a></div><div class="site-footer__meta"><a id="footer-x-link" href="https://x.com/Dancho_RealJP" target="_blank" rel="noopener noreferrer">X</a><span>© LA_Terminal. All rights reserved.</span></div></footer>
   <button id="top-button" class="top-button" type="button" aria-label="ページ上部へ戻る">↑<span>TOP</span></button>
   <div id="modal-root"></div>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="app.js?v=20260802b"></script>
+  <script src="app.js?v=20260802c"></script>
   <script src="firestore-feed.js?v=20260802b"></script>
 </body>
 </html>

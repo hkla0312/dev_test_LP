@@ -11,6 +11,24 @@
 /* フライヤーは縦横比を維持し、すべての媒体で全面を見せる。 */
 .event-feature__visual img { object-fit: contain; background: #f7f7f9; padding: 10px; }
 
+/* PCでも6軸のラベルと値を読み取りやすくする。 */
+.profile-body .signal-layout { grid-template-columns: minmax(270px, 310px) minmax(220px, 1fr); gap: 28px; }
+.profile-body .signal-canvas { width: min(100%, 300px); height: auto; }
+.profile-body .signal-list { font-size: 13px; }
+.profile-body .signal-list li { padding: 7px 0; }
+
+/* SNSごとの識別色を用いたリンクボタン。 */
+.social-links__item { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; border: 0 !important; color: #fff !important; }
+.social-links__item--x { background: #111115; }
+.social-links__item--youtube { background: #ff0033; }
+.social-links__item--music { background: #7867e7; }
+.social-links__item:hover { filter: brightness(.92); }
+
+@media (max-width: 680px) {
+  .profile-body .signal-layout { grid-template-columns: 1fr; }
+  .profile-body .signal-canvas { width: min(100%, 280px); }
+}
+
 .system-card h3 small { color: var(--muted); font-size: 10px; }
 .system-card__closed { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font: 500 9px var(--mono); letter-spacing: .1em; }
 

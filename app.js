@@ -61,7 +61,7 @@ function drawSignalChart(canvas) {
   const point = (index, scale = 1) => { const angle = -Math.PI / 2 + Math.PI * 2 * index / values.length; return [center + Math.cos(angle) * radius * scale, center + Math.sin(angle) * radius * scale]; };
   context.clearRect(0, 0, 280, 280); context.strokeStyle = "#e8e6ee"; context.lineWidth = 1;
   [.25, .5, .75, 1].forEach(scale => { context.beginPath(); values.forEach((_, index) => { const [x, y] = point(index, scale); index ? context.lineTo(x, y) : context.moveTo(x, y); }); context.closePath(); context.stroke(); });
-  SIGNAL_AXIS_META.forEach(([, label, color], index) => { const [x, y] = point(index); context.beginPath(); context.moveTo(center, center); context.lineTo(x, y); context.strokeStyle = color; context.globalAlpha = .4; context.stroke(); context.globalAlpha = 1; const [lx, ly] = point(index, 1.22); context.fillStyle = color; context.font = "600 9px sans-serif"; context.textAlign = lx < center - 4 ? "right" : lx > center + 4 ? "left" : "center"; context.fillText(label, lx, ly + 3); });
+  SIGNAL_AXIS_META.forEach(([, label, color], index) => { const [x, y] = point(index); context.beginPath(); context.moveTo(center, center); context.lineTo(x, y); context.strokeStyle = color; context.globalAlpha = .4; context.stroke(); context.globalAlpha = 1; const [lx, ly] = point(index, 1.28); context.fillStyle = color; context.font = "600 13px 'Noto Sans JP', sans-serif"; context.textAlign = lx < center - 4 ? "right" : lx > center + 4 ? "left" : "center"; context.fillText(label, lx, ly + 4); });
   context.beginPath(); values.forEach((value, index) => { const [x, y] = point(index, value / total); index ? context.lineTo(x, y) : context.moveTo(x, y); }); context.closePath(); context.fillStyle = "rgba(220,35,112,.24)"; context.fill(); context.strokeStyle = "#dc2370"; context.lineWidth = 2; context.stroke();
   values.forEach((value, index) => { const [x, y] = point(index, value / total); context.beginPath(); context.arc(x, y, 3.5, 0, Math.PI * 2); context.fillStyle = SIGNAL_AXIS_META[index][2]; context.fill(); });
 }
@@ -156,7 +156,7 @@ function updateSignalAccess() {
   const used = signalUsage(), remaining = Math.max(0, SIGNAL_DAILY_LIMIT - used), enabled = remaining > 0;
   form.querySelectorAll("select, textarea, button").forEach(control => { control.disabled = !enabled; });
   form.querySelectorAll("select, button").forEach(control => { control.disabled = !enabled; });
-  if (note) note.innerHTML = `SIGNAL送信は1日3回までです。（残り ${remaining} 回）<br>※テスト運用となります。予告なく会員専用機能にシフトする場合があります。`;
+  if (note) note.innerHTML = `SIGNAL送信は1日3回までです。（残り ${remaining} 回）<br>※デモバージョンです。会員専用SIGNALではアーティストにメッセージが届き、それもまたアーティストページの変化につながります。`;
 }
 function initSignalForm() {
   const form = $("#signal-form"), select = $("#signal-artist-select"), status = $("#signal-status");
