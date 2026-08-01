@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light" />
     <meta name="description" content="LA_OS Home" />
     <title>LA_OS / Home</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260726i" />
+    <link rel="stylesheet" href="./assets/styles.css?v=20260801c" />
     <link rel="stylesheet" href="./assets/lp-v002.css?v=20260728a" />
     <link rel="stylesheet" href="./assets/onbox-nav.css?v=20260728a" />
     <link rel="stylesheet" href="./assets/la-os-unified.css?v=20260728a" />
@@ -169,20 +169,27 @@
           </div>
         </section>
 
-        <section class="panel signal-card" aria-labelledby="signal-title">
+        <section class="panel signal-card" id="signal-section" aria-labelledby="signal-title">
           <div class="panel-heading">
             <div>
               <p class="section-code">05</p>
               <h2 id="signal-title">シグナル</h2>
             </div>
-            <button class="ghost-button tiny" id="reload-signal" type="button">Reload</button>
           </div>
-
-          <blockquote id="signal-message"></blockquote>
-          <div class="signal-meta">
-            <span id="signal-target">ARTIST 02</span>
-            <span id="signal-time">2026/04/01 18:00 JST</span>
-          </div>
+          <form class="form-shell signal-inline-form" id="signal-form">
+            <p class="dialog-copy">素敵なアーティストには感想を届けましょう！</p>
+            <div class="signal-artist-preview" id="signal-artist-preview" aria-live="polite">
+              <span class="signal-artist-thumb" id="signal-artist-thumb" aria-hidden="true"></span>
+              <strong id="signal-artist-name">ARTIST</strong>
+            </div>
+            <label class="field"><span>アーティスト</span><select id="signal-artist-select" required></select></label>
+            <label class="field"><span>カンジョウ</span><select id="signal-emotion-select" required></select></label>
+            <div class="summary-box">送信回数: <span id="signal-limit-status">DEMO / ∞</span></div>
+            <p class="counter-note" id="signal-limit-note">デモ期間中は何度でも送信できます。</p>
+            <label class="field"><span>コメント<small id="signal-counter">0 / 15</small></span><textarea id="signal-comment" maxlength="15" rows="3" required></textarea></label>
+            <div class="dialog-actions"><button class="ghost-button" id="signal-submit" type="submit">送信する</button></div>
+          </form>
+          <div class="signal-history" id="signal-history" aria-live="polite"></div>
         </section>
       </main>
 
@@ -290,37 +297,6 @@
       </div>
     </dialog>
 
-    <dialog class="os-dialog" id="signal-dialog" aria-labelledby="signal-title-dialog">
-      <form class="dialog-shell form-shell" id="signal-form">
-        <p class="dialog-eyebrow">SEND SIGNAL</p>
-        <h3 id="signal-title-dialog">SIGNAL</h3>
-        <p class="dialog-copy">素敵なアーティストには感想を届けましょう！</p>
-        <div class="signal-artist-preview" id="signal-artist-preview" aria-live="polite">
-          <span class="signal-artist-thumb" id="signal-artist-thumb" aria-hidden="true"></span>
-          <strong id="signal-artist-name">ARTIST 02</strong>
-        </div>
-        <label class="field">
-          <span>アーティスト</span>
-          <select id="signal-artist-select" required></select>
-        </label>
-        <label class="field">
-          <span>カンジョウ</span>
-          <select id="signal-emotion-select" required></select>
-        </label>
-        <div class="summary-box">送信回数: <span id="signal-limit-status">DEMO / ∞</span></div>
-        <p class="counter-note" id="signal-limit-note">デモ期間中は何度でも送信できます。</p>
-        <label class="field">
-          <span>コメント<small id="signal-counter">0 / 15</small></span>
-          <textarea id="signal-comment" maxlength="15" rows="3"></textarea>
-        </label>
-
-        <div class="dialog-actions">
-          <button class="ghost-button" id="signal-submit" type="submit">送信する</button>
-          <button class="ghost-button" id="signal-close" type="button">閉じる</button>
-        </div>
-      </form>
-    </dialog>
-
     <dialog class="os-dialog" id="settings-dialog" aria-labelledby="settings-title">
       <form class="dialog-shell form-shell" id="settings-form">
         <p class="dialog-eyebrow">USER SETTINGS</p>
@@ -364,11 +340,11 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
     <script src="./firebase-config.js"></script>
     <script src="./assets/auth.js?v=20260726i" defer></script>
-    <script src="./assets/app.js?v=20260801a" defer></script>
+    <script src="./assets/app.js?v=20260801c" defer></script>
     <script src="../shared/danmaku-blocked-template.js"></script>
     <script src="../shared/danmaku-moderation.js"></script>
     <script src="../shared/error-reporting.js"></script>
-    <script src="./assets/firebase-core.js?v=20260801b" defer></script>
+    <script src="./assets/firebase-core.js?v=20260801c" defer></script>
   </body>
 </html>
 

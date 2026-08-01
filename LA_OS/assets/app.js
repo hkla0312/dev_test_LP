@@ -81,32 +81,8 @@
       status: "SCHEDULED",
       flyerUrl: "",
     },
-    signals: [
-      {
-        signalId: "SIG-042",
-        eventId: "evt-001",
-        actId: "act-002",
-        artistName: "ARTIST 02",
-        comment: "繝・せ繝医Γ繝・そ繝ｼ繧ｸ 01",
-        timestamp: "2026/04/01 18:00 JST",
-      },
-      {
-        signalId: "SIG-041",
-        eventId: "evt-002",
-        actId: "act-003",
-        artistName: "ARTIST 03",
-        comment: "繝・せ繝医Γ繝・そ繝ｼ繧ｸ 02",
-        timestamp: "2026/04/01 17:34 JST",
-      },
-      {
-        signalId: "SIG-040",
-        eventId: "evt-003",
-        actId: "act-005",
-        artistName: "ARTIST 05",
-        comment: "繝・せ繝医Γ繝・そ繝ｼ繧ｸ 03",
-        timestamp: "2026/04/01 17:08 JST",
-      },
-    ],
+    // SIGNAL履歴はログイン中の本人が実際に送信したものだけをFirestoreから受け取る。
+    signals: [],
     danmaku: [
       {
         danmakuId: "DMK-021",
@@ -419,6 +395,13 @@
   };
 
   const body = document.body;
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]);
 
   function getSelectedReservation() {
     if (Array.isArray(state.reservations)) {
@@ -638,13 +621,21 @@
   }
 
   function renderSignalCard() {
-    const signals = state.signals;
-    if (!signals.length) return;
-    runtime.signalIndex = clamp(runtime.signalIndex, 0, signals.length - 1);
-    const signal = signals[runtime.signalIndex];
-    setText("#signal-message", signal.commentSummary || signal.comment);
-    setText("#signal-target", signal.artistName ?? signal.actName ?? "ARTIST");
-    setText("#signal-time", signal.timestamp);
+    const history = $("#signal-history");
+    if (!history) return;
+    const signals = Array.isArray(state.signals) ? state.signals : [];
+    if (!signals.length) {
+      history.innerHTML = '<p class="signal-history-empty">まだ送信したSIGNALはありません。</p>';
+      return;
+    }
+
+    history.innerHTML = signals.map((signal) => {
+      const artist = escapeHtml(signal.artistName ?? signal.actName ?? "ARTIST");
+      const emotion = escapeHtml(signal.emotionLabel ?? "SIGNAL");
+      const comment = escapeHtml(signal.commentSummary || signal.comment || "コメントなし");
+      const timestamp = escapeHtml(signal.timestamp || "");
+      return `<article class="signal-history-entry"><div><strong>${artist}</strong><span>${emotion}</span></div><p>${comment}</p><time>${timestamp}</time></article>`;
+    }).join("");
   }
 
   function applySubmittedSignal(detail = {}) {
@@ -1338,6 +1329,11 @@
       applySubmittedSignal(event.detail || {});
       pulseProgress("Progressを反映しました。");
     });
+    window.addEventListener("laos-signal-history", (event) => {
+      state.signals = Array.isArray(event.detail) ? event.detail : [];
+      runtime.signalIndex = 0;
+      renderSignalCard();
+    });
     window.addEventListener("laos-signal-artists-updated", () => {
       if ($("#signal-dialog")?.open) {
         openSignalDialog();
@@ -1396,13 +1392,6 @@
     $("#danmaku-comment")?.addEventListener("input", updateDanmakuCounter);
 
     $("#danmaku-help")?.addEventListener("click", openHelpDialog);
-
-    $("#reload-signal")?.addEventListener("click", () => {
-      const nextIndex = pickDifferentIndex(state.signals.length, runtime.signalIndex);
-      runtime.signalIndex = nextIndex;
-      renderSignalCard();
-      setToast("シグナルを更新しました。");
-    });
 
     $("#reload-danmaku")?.addEventListener("click", () => {
       if (runtime.danmakuReloadCount >= 5) return;
@@ -1468,7 +1457,7 @@
       } else if (action === "reserve") {
         openReservationForm("create");
       } else if (action === "signal") {
-        openSignalDialog();
+        $("#signal-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (action === "onbox") {
         window.location.assign(new URL("../la-on-box/?next=watch", window.location.href).href);
         return;
@@ -1479,7 +1468,7 @@
       const labels = {
         home: "ホームに戻りました。",
         reserve: "予約を開きました。",
-        signal: "シグナルを開きました。",
+        signal: "シグナルへ移動しました。",
         onbox: "ONBOXへ接続します。",
         settings: "設定を開きました。",
       };

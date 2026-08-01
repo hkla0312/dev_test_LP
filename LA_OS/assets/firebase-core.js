@@ -26,6 +26,7 @@
   let signalSubmitBound = false;
   let danmakuSubmitBound = false;
   let currentBackendIssue = null;
+  let unsubscribeMemberSignals = null;
 
   function getFunctionsApi() {
     return typeof firebase.functions === "function" ? firebase.functions() : null;
@@ -435,6 +436,50 @@
       );
   }
 
+  // 本人が送った、削除されていない本番SIGNALだけを履歴へ反映する。
+  function watchMemberSignals(db, user) {
+    unsubscribeMemberSignals?.();
+    unsubscribeMemberSignals = db.collection("artistSignals")
+      .where("memberUid", "==", user.uid)
+      .where("environment", "==", "prod")
+      .where("isDeleted", "==", false)
+      .onSnapshot(
+        (snapshot) => {
+          const signals = snapshot.docs.map((doc) => {
+            const data = doc.data() || {};
+            const createdAt = data.createdAt?.toDate?.();
+            const timestamp = createdAt
+              ? `${new Intl.DateTimeFormat("ja-JP", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                  timeZone: "Asia/Tokyo",
+                }).format(createdAt)} JST`
+              : "";
+            return {
+              signalId: doc.id,
+              artistId: data.artistId || "",
+              artistName: data.artistName || "ARTIST",
+              signalType: data.signalType || "",
+              emotionLabel: data.signalLabel || "SIGNAL",
+              comment: data.comment || "",
+              commentSummary: data.comment || "",
+              timestamp,
+              createdAtMs: createdAt?.getTime?.() || 0,
+            };
+          }).sort((a, b) => b.createdAtMs - a.createdAtMs);
+          window.dispatchEvent(new CustomEvent("laos-signal-history", { detail: signals }));
+        },
+        (error) => {
+          console.error("member signal history snapshot error", error);
+          window.dispatchEvent(new CustomEvent("laos-signal-history", { detail: [] }));
+        }
+      );
+  }
+
   function bindSignalOpenPreview() {
     const dialog = $("#signal-dialog");
     if (dialog) {
@@ -454,6 +499,7 @@
     await loadCurrentMember(user);
     watchSystemSettings(db);
     watchPublishedArtists(db);
+    watchMemberSignals(db, user);
     bindDanmakuForm();
     refreshSignalForm();
   });

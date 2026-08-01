@@ -892,11 +892,28 @@ blockquote {
 }
 
 .system-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
   min-height: 1.1em;
   margin: 10px 0 0;
   padding: 0 4px;
   color: rgba(122, 230, 232, 0.84);
   font-size: 0.58rem;
+}
+
+.system-toast #system-toast-message {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.system-toast-report {
+  flex: none;
+  margin-left: auto;
+  min-height: 24px;
+  padding: 3px 10px;
+  font-size: 0.54rem;
 }
 
 .system-footer {
@@ -1031,6 +1048,61 @@ body.is-noise::after {
 .form-shell {
   display: grid;
   gap: 14px;
+}
+
+.signal-inline-form {
+  padding: 14px;
+  border: 1px solid var(--panel-accent-soft);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.signal-history {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.signal-history-empty {
+  margin: 0;
+  padding: 16px;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  font-size: 0.72rem;
+}
+
+.signal-history-entry {
+  display: grid;
+  gap: 7px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.signal-history-entry > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.signal-history-entry strong {
+  color: var(--text);
+  font-size: 0.76rem;
+}
+
+.signal-history-entry span,
+.signal-history-entry time {
+  color: var(--panel-accent);
+  font-size: 0.6rem;
+}
+
+.signal-history-entry p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
 .form-grid {
@@ -2086,6 +2158,13 @@ body {
 .auth-card h1{margin:0}
 .auth-card form{display:grid;gap:12px}
 .auth-message{min-height:1.4em;margin:0;color:#ff7b7b;font-size:.75rem}
+
+.auth-report-button {
+  min-height: 34px;
+  margin-top: 8px;
+  padding-inline: 12px;
+  align-self: flex-start;
+}
 .auth-intro{display:grid;gap:10px;padding:4px 0 8px}
 .auth-copy{margin:0;color:var(--muted);font-size:.82rem;line-height:1.5}
 .auth-intro-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
