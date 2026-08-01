@@ -1335,6 +1335,7 @@
       renderSignalCard();
     });
     window.addEventListener("laos-signal-artists-updated", () => {
+      renderSignalArtistPreview();
       if ($("#signal-dialog")?.open) {
         openSignalDialog();
       }

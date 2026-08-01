@@ -198,6 +198,8 @@
       }
     }
 
+    // 常設フォームの表示内容も、取得済みの選択値と必ず同期する。
+    artistSelect?.dispatchEvent(new Event("change", { bubbles: true }));
     syncSignalQuota();
   }
 
