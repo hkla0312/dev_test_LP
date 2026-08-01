@@ -1045,6 +1045,45 @@ body.is-noise::after {
   font-size: 0.78rem;
 }
 
+.error-shell {
+  gap: 14px;
+}
+
+.error-shell h3 {
+  margin: 0;
+}
+
+.error-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(241, 84, 125, 0.36);
+  border-radius: 12px;
+  background: rgba(241, 84, 125, 0.08);
+}
+
+.error-code-row span {
+  color: var(--muted);
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.error-code-row strong {
+  color: #ffd1da;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+}
+
+.error-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
 .form-shell {
   display: grid;
   gap: 14px;

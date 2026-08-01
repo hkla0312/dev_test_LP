@@ -34,6 +34,7 @@
         </section>
 
         <p id="authMessage" class="auth-message" aria-live="polite"></p>
+        <button class="ghost-button auth-report-button" id="authReportButton" type="button" hidden>報告する</button>
 
         <section class="auth-section auth-register-section" id="authRegisterPanel" hidden>
           <h2>新規登録</h2>
@@ -104,6 +105,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="./firebase-config.js"></script>
+    <script src="../shared/error-reporting.js"></script>
     <script src="./assets/auth.js?v=20260729b" defer></script>
   </body>
 </html>

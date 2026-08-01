@@ -676,7 +676,11 @@
   ];
 
   function getSignalArtistList() {
-    const published = Array.isArray(window.LAOS_SIGNAL_ARTISTS) ? window.LAOS_SIGNAL_ARTISTS : [];
+    const published = Array.isArray(window.LAOS_SIGNAL_ARTISTS)
+      ? window.LAOS_SIGNAL_ARTISTS
+      : Array.isArray(window.LAOS_PUBLISHED_ARTISTS)
+      ? window.LAOS_PUBLISHED_ARTISTS
+      : [];
     if (published.length) {
       return published.map((artist) => ({
         source: "admin",
@@ -1007,9 +1011,9 @@
     const select = $("#signal-artist-select");
     const emotionSelect = $("#signal-emotion-select");
     const comment = $("#signal-comment");
+    const artists = getSignalArtistList();
 
     if (select) {
-      const artists = getSignalArtistList();
       select.replaceChildren(
         ...(artists.length
           ? artists.map((artist) => makeOption(artist.id, artist.name))
@@ -1017,12 +1021,13 @@
         )
       );
       select.value = artists[0]?.id || "";
-      select.disabled = !artists.length;
+      select.disabled = false;
     }
 
-    if (emotionSelect && !emotionSelect.options.length) {
+    if (emotionSelect) {
       emotionSelect.replaceChildren(...SIGNAL_EMOTIONS.map((emotion) => makeOption(emotion.value, emotion.label)));
       emotionSelect.value = "song";
+      emotionSelect.disabled = false;
     }
 
     if (comment) {
@@ -1335,6 +1340,7 @@
       renderSignalCard();
     });
     window.addEventListener("laos-signal-artists-updated", () => {
+      window.LAOS_PUBLISHED_ARTISTS = getSignalArtistList();
       renderSignalArtistPreview();
       if ($("#signal-dialog")?.open) {
         openSignalDialog();
@@ -1460,7 +1466,7 @@
       } else if (action === "signal") {
         $("#signal-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (action === "onbox") {
-        window.location.assign(new URL("../la-on-box/?next=watch", window.location.href).href);
+        window.location.assign(new URL("../la-on-box/watch", window.location.href).href);
         return;
       } else if (action === "settings") {
         openSettingsDialog();
@@ -1470,7 +1476,7 @@
         home: "ホームに戻りました。",
         reserve: "予約を開きました。",
         signal: "シグナルへ移動しました。",
-        onbox: "ONBOXへ接続します。",
+        onbox: "ONBOXを開きました。",
         settings: "設定を開きました。",
       };
       setToast(labels[action] ?? "");

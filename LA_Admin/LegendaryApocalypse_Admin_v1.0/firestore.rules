@@ -39,7 +39,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     match /artistSignals/{signalId} {
-      allow create: if request.auth != null && systemAllowsSignals() && request.resource.data.memberUid == request.auth.uid && request.resource.data.signalType in ['song', 'stage', 'character'] && request.resource.data.isDeleted == false && request.resource.data.environment == get(/databases/$(database)/documents/members/$(request.auth.uid)).data.environment;
+      allow create: if request.auth != null && systemAllowsSignals() && request.resource.data.memberUid == request.auth.uid && request.resource.data.signalType in ['song', 'stage', 'character', 'other'] && request.resource.data.isDeleted == false && request.resource.data.environment == get(/databases/$(database)/documents/members/$(request.auth.uid)).data.environment;
       allow read: if isAdmin() || (resource.data.isDeleted == false && resource.data.environment == 'prod');
       allow update, delete: if isAdmin();
     }

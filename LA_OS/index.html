@@ -297,6 +297,23 @@
       </div>
     </dialog>
 
+    <dialog class="os-dialog error-dialog" id="error-dialog" aria-labelledby="error-dialog-title">
+      <div class="dialog-shell error-shell">
+        <p class="dialog-eyebrow">SEND FAILED</p>
+        <h3 id="error-dialog-title">送信失敗</h3>
+        <p class="dialog-copy" id="error-dialog-message">送信処理に失敗しました。</p>
+        <div class="error-code-row">
+          <span>エラーコード</span>
+          <strong id="error-dialog-code">LAOS-UNK-001</strong>
+        </div>
+        <p class="error-hint">このコードを添えて運営に報告してください。</p>
+        <div class="dialog-actions">
+          <button class="ghost-button" id="error-dialog-close" type="button">閉じる</button>
+          <button class="ghost-button" id="error-dialog-report" type="button">運営に報告</button>
+        </div>
+      </div>
+    </dialog>
+
     <dialog class="os-dialog" id="settings-dialog" aria-labelledby="settings-title">
       <form class="dialog-shell form-shell" id="settings-form">
         <p class="dialog-eyebrow">USER SETTINGS</p>

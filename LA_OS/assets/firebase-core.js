@@ -131,6 +131,37 @@
     }
   }
 
+  function showBackendErrorDialog(issue) {
+    const dialog = $("#error-dialog");
+    if (!dialog || !issue) return;
+
+    currentBackendIssue = issue.reportable ? issue : null;
+
+    const title = $("#error-dialog-title");
+    const message = $("#error-dialog-message");
+    const code = $("#error-dialog-code");
+    const closeButton = $("#error-dialog-close");
+    const reportButton = $("#error-dialog-report");
+
+    if (title) title.textContent = "送信失敗";
+    if (message) message.textContent = issue.message || "送信処理に失敗しました。";
+    if (code) code.textContent = issue.code || "LAOS-UNK-001";
+    if (reportButton) {
+      reportButton.hidden = !currentBackendIssue;
+      reportButton.onclick = currentBackendIssue ? reportBackendIssue : null;
+    }
+    if (closeButton) {
+      closeButton.onclick = () => dialog.close();
+    }
+
+    if (typeof dialog.showModal === "function") {
+      if (dialog.open) dialog.close();
+      dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
+  }
+
   async function reportBackendIssue() {
     if (!currentBackendIssue?.reportable) {
       return;
@@ -165,6 +196,7 @@
       await callable(payload);
       currentBackendIssue = null;
       toast("報告を送信しました。");
+      $("#error-dialog")?.close?.();
     } catch (error) {
       toast(
         error?.code === "permission-denied"
@@ -178,6 +210,13 @@
   function refreshSignalForm() {
     const artistSelect = $("#signal-artist-select");
     const emotionSelect = $("#signal-emotion-select");
+    window.LAOS_SIGNAL_ARTISTS = publishedArtists.map((artist) => ({
+      id: artist.id,
+      name: artist.name || "ARTIST",
+      imageUrl: artist.imageUrl || artist.thumbnailUrl || "",
+      eventId: artist.eventId || "",
+      actId: artist.actId || "",
+    }));
     if (artistSelect) {
       const previous = artistSelect.value;
       artistSelect.innerHTML = publishedArtists.length
@@ -201,6 +240,9 @@
     // 常設フォームの表示内容も、取得済みの選択値と必ず同期する。
     artistSelect?.dispatchEvent(new Event("change", { bubbles: true }));
     syncSignalQuota();
+    window.dispatchEvent(new CustomEvent("laos-signal-artists-updated", {
+      detail: window.LAOS_SIGNAL_ARTISTS,
+    }));
   }
 
   function updateSignalPreview(artistId, commentText, timestampText) {
@@ -297,7 +339,7 @@
     const comment = $("#signal-comment")?.value.trim() || "";
     const used = getSignalUsageCount();
 
-    if (!currentUser || !currentMember) {
+    if (!currentUser) {
       toast("ログイン状態を確認中です。数秒後にもう一度お試しください。");
       return;
     }
@@ -355,6 +397,7 @@
         signalType,
       });
       toast(issue.message, issue);
+      showBackendErrorDialog(issue);
       console.error("SIGNAL送信エラー", error);
     }
   }
@@ -386,6 +429,7 @@
         senderMode,
       });
       toast(issue.message, issue);
+      showBackendErrorDialog(issue);
       console.error("DANMAKU送信エラー", error);
     }
   }

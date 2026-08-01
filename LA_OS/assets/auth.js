@@ -1,4 +1,4 @@
-/* global firebase, FIREBASE_CONFIG */
+﻿/* global firebase, FIREBASE_CONFIG */
 (() => {
   'use strict';
 
@@ -13,6 +13,7 @@
 
   let authInstance = null;
   let expiryTimer = null;
+  let currentAuthIssue = null;
 
   const loadProfile = () => {
     try {
@@ -41,9 +42,15 @@
 
   const isFreshProfile = (profile) => Boolean(profile && Number(profile.expiresAt || 0) > Date.now());
 
-  const setMessage = (value) => {
+  const setMessage = (value, issue = null) => {
     const node = $('#authMessage');
+    const reportButton = $('#authReportButton');
     if (node) node.textContent = value || '';
+    currentAuthIssue = issue?.reportable ? issue : null;
+    if (reportButton) {
+      reportButton.hidden = !currentAuthIssue;
+      reportButton.onclick = currentAuthIssue ? reportAuthIssue : null;
+    }
   };
 
   const setDebugFlag = (name, value) => {
@@ -81,6 +88,90 @@
 
     const reason = map[code] || fallback;
     return `${actionLabel}できませんでした。${reason}${code ? `（${code}）` : ''}`;
+  };
+
+  const getFunctionsApi = () => {
+    if (typeof firebase === 'undefined' || typeof firebase.functions !== 'function') {
+      return null;
+    }
+
+    try {
+      return firebase.functions();
+    } catch {
+      return null;
+    }
+  };
+
+  const buildAuthIssue = (error, actionLabel, context = {}) => {
+    const helper = window.LAErrorReporting;
+    const classified = helper?.classifyError
+      ? helper.classifyError(error, {
+          source: 'laos',
+          area: 'auth',
+          action: actionLabel,
+        })
+      : null;
+
+    return {
+      message: helper?.formatUserMessage
+        ? helper.formatUserMessage(error, {
+            source: 'laos',
+            area: 'auth',
+            action: actionLabel,
+            actionLabel,
+          })
+        : describeAuthError(error, actionLabel),
+      reportable: Boolean(classified?.reportable),
+      code: classified?.code || String(error?.code || ''),
+      error,
+      actionLabel,
+      context,
+    };
+  };
+
+  const showAuthIssue = (error, actionLabel, context = {}) => {
+    const issue = buildAuthIssue(error, actionLabel, context);
+    setMessage(issue.message, issue);
+  };
+
+  const reportAuthIssue = async () => {
+    if (!currentAuthIssue?.reportable) {
+      return;
+    }
+
+    const functionsApi = getFunctionsApi();
+    if (!functionsApi) {
+      setMessage('報告機能の準備ができていません。');
+      return;
+    }
+
+    try {
+      const callable = functionsApi.httpsCallable('reportBackendError');
+      const helper = window.LAErrorReporting;
+      const payload = helper?.buildReportPayload
+        ? helper.buildReportPayload(currentAuthIssue.error, {
+            source: 'laos',
+            area: 'auth',
+            action: currentAuthIssue.actionLabel,
+            pageUrl: window.location.href,
+            ...currentAuthIssue.context,
+          })
+        : {
+            source: 'laos',
+            area: 'auth',
+            action: currentAuthIssue.actionLabel,
+            pageUrl: window.location.href,
+            errorCode: currentAuthIssue.code || 'AUTH_UNKNOWN',
+            errorCategory: 'backend',
+            message: currentAuthIssue.message,
+          };
+
+      await callable(payload);
+      currentAuthIssue = null;
+      setMessage('報告を送信しました。');
+    } catch (error) {
+      showAuthIssue(error, '報告');
+    }
   };
 
   const openPanel = (panel) => {
@@ -680,7 +771,7 @@
             } catch {
               // ignore
             }
-            setMessage(formatMemberAuthError(waitError, '登録'));
+            showAuthIssue(waitError, '登録');
             return;
           }
         }
@@ -689,7 +780,7 @@
         } catch {
           // ignore rollback failure
         }
-        setMessage(formatMemberAuthError(firestoreError, '登録'));
+        showAuthIssue(firestoreError, '登録');
       }
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
@@ -703,13 +794,13 @@
             redirectToMember();
             return;
           } catch (retryError) {
-            setMessage(describeAuthError(retryError, '登録'));
+            showAuthIssue(retryError, '登録');
             return;
           }
         }
       }
 
-      setMessage(formatMemberAuthError(error, '登録'));
+      showAuthIssue(error, '登録');
     }
   }
 
@@ -762,10 +853,10 @@
         } catch {
           // ignore
         }
-        setMessage(formatMemberAuthError(profileError, 'ログイン'));
+        showAuthIssue(profileError, 'ログイン');
       }
     } catch (error) {
-      setMessage(formatMemberAuthError(error, 'ログイン'));
+      showAuthIssue(error, 'ログイン');
     }
   }
 

@@ -1,12 +1,39 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { classifyComment, normalizeComment } = require("../moderation");
+const { classifyComment, normalizeComment, moderationMessage } = require("../moderation");
 
-test("normal comment is safe", () => assert.equal(classifyComment("\u6700\u9ad8\u306e\u30e9\u30a4\u30d6\u3067\u3059").status, "safe"));
-test("blocked term is blocked after normalization", () => assert.equal(classifyComment("\u6b7b\u3000\u306d").status, "blocked"));
-test("URL, email, phone and repeated symbols require review", () => {
-  ["https://example.com", "a@example.com", "090-1234-5678", "!!!!!!!!"].forEach(comment => assert.equal(classifyComment(comment).status, "review"));
+test("normal comment is safe", () => {
+  assert.equal(classifyComment("最高のライブです").status, "safe");
 });
-test("duplicate and rapid posts require review", () => assert.equal(classifyComment("\u540c\u3058\u3067\u3059", { sameText: true, rapidPost: true }).status, "review"));
-test("over 30 characters requires review", () => assert.equal(classifyComment("\u3042".repeat(31)).status, "review"));
-test("normalization removes spaces and symbols", () => assert.equal(normalizeComment("\uff33\uff21\u3000\uff2d\uff30\uff2c\uff25!!"), "sample"));
+
+test("blocked term is blocked after normalization", () => {
+  const result = classifyComment("死　ね");
+  assert.equal(result.status, "blocked");
+  assert.equal(result.reasons.includes("blocked_term"), true);
+});
+
+test("URL, email, phone and repeated symbols are blocked", () => {
+  ["https://example.com", "a@example.com", "090-1234-5678", "!!!!!!!!"].forEach((comment) => {
+    assert.equal(classifyComment(comment).status, "blocked");
+  });
+});
+
+test("duplicate and rapid posts are blocked", () => {
+  const result = classifyComment("同じです", { sameText: true, rapidPost: true });
+  assert.equal(result.status, "blocked");
+  assert.equal(result.reasons.includes("duplicate"), true);
+  assert.equal(result.reasons.includes("rapid_post"), true);
+});
+
+test("over 30 characters is blocked", () => {
+  assert.equal(classifyComment("あ".repeat(31)).status, "blocked");
+});
+
+test("normalization removes spaces and symbols", () => {
+  assert.equal(normalizeComment("ＳＡ　ＭＰＬＥ!!"), "sample");
+});
+
+test("moderation message follows the first blocked reason", () => {
+  const result = classifyComment("https://example.com");
+  assert.equal(moderationMessage(result), "URLは送れません。");
+});

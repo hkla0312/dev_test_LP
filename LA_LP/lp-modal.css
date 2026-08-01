@@ -320,6 +320,159 @@
   letter-spacing: .12em;
 }
 
+.artist-signal-compose {
+  margin-top: 22px;
+  padding: 17px;
+  border: 1px solid rgba(56, 245, 255, .24);
+  background: linear-gradient(180deg, rgba(56, 245, 255, .05), rgba(12, 17, 27, .3));
+}
+
+.artist-signal-compose h3 {
+  margin: 0 0 10px;
+}
+
+.artist-signal-compose__lead {
+  margin: 0 0 14px;
+  color: var(--sub);
+  font-size: 12px;
+}
+
+.artist-signal-compose__member {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(146, 163, 190, .2);
+}
+
+.artist-signal-compose__member span {
+  color: var(--cyan);
+  font: 600 9px var(--font-display);
+  letter-spacing: .09em;
+}
+
+.artist-signal-compose__member strong {
+  font: 600 13px var(--font-display);
+}
+
+.artist-signal-compose__member small {
+  color: var(--sub);
+  font-size: 11px;
+}
+
+.artist-signal-form {
+  display: grid;
+  gap: 14px;
+}
+
+.artist-signal-fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.artist-signal-fieldset legend {
+  margin-bottom: 9px;
+  color: var(--cyan);
+  font: 600 9px var(--font-display);
+  letter-spacing: .12em;
+}
+
+.artist-signal-options {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.artist-signal-option {
+  position: relative;
+  padding: 11px 10px 10px;
+  border: 1px solid rgba(146, 163, 190, .24);
+  background: rgba(8, 12, 20, .8);
+  display: grid;
+  gap: 3px;
+  min-height: 72px;
+}
+
+.artist-signal-option input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.artist-signal-option span {
+  font: 600 12px var(--font-display);
+}
+
+.artist-signal-option small {
+  color: var(--sub);
+  font-size: 10px;
+}
+
+.artist-signal-option.is-selected {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px rgba(56, 245, 255, .18), inset 0 0 0 1px rgba(56, 245, 255, .14);
+}
+
+.artist-signal-comment {
+  display: grid;
+  gap: 8px;
+}
+
+.artist-signal-comment > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text);
+  font: 600 11px var(--font-display);
+  letter-spacing: .06em;
+}
+
+.artist-signal-comment small {
+  color: var(--sub);
+}
+
+.artist-signal-comment textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 11px 12px;
+  border: 1px solid rgba(146, 163, 190, .28);
+  background: rgba(5, 6, 8, .92);
+  color: var(--text);
+  font: 14px var(--font-body);
+  resize: vertical;
+}
+
+.artist-signal-form__footer {
+  display: grid;
+  gap: 10px;
+}
+
+.artist-signal-note {
+  margin: 0;
+  color: var(--sub);
+  font-size: 12px;
+}
+
+.artist-signal-form output {
+  min-height: 18px;
+  color: var(--cyan);
+  font-size: 12px;
+}
+
+.artist-signal-form output[data-tone="warn"] {
+  color: #ff9ba4;
+}
+
+.artist-signal-form output[data-tone="ready"] {
+  color: var(--success);
+}
+
+.artist-signal-login {
+  margin-top: 12px;
+}
+
 .danmaku-lock-dialog {
   position: fixed;
   inset: 0;
@@ -426,5 +579,9 @@
 
   .artist-signal--modal svg {
     height: 190px;
+  }
+
+  .artist-signal-options {
+    grid-template-columns: 1fr;
   }
 }

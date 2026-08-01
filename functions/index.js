@@ -107,8 +107,6 @@ function signalTypeLabel(signalType) {
       return "ステージが良い";
     case "character":
       return "キャラが良い";
-    case "other":
-      return "そのほか";
     default:
       return String(signalType || "");
   }
@@ -258,8 +256,12 @@ async function submitMemberSignalHandler(request) {
     loadMemberProfile(request.auth.uid),
     db.collection("artists").doc(artistId).get(),
   ]);
-  if (!member) throw new HttpsError("failed-precondition", "Member profile not found.");
   if (!artist.exists) throw new HttpsError("not-found", "Artist not found.");
+  const memberProfile = member || {
+    memberId: request.auth.token?.email || request.auth.uid,
+    displayName: request.auth.token?.name || request.auth.token?.email || "LA_OS",
+    environment: "prod",
+  };
 
   const artistData = artist.data() || {};
   const now = admin.firestore.FieldValue.serverTimestamp();
@@ -269,8 +271,8 @@ async function submitMemberSignalHandler(request) {
     artistName: artistData.name || artistData.artistKey || artist.id,
     artistThumbnailUrl: artistData.thumbnailUrl || artistData.imageUrl || "",
     memberUid: request.auth.uid,
-    memberId: member.memberId || "",
-    memberDisplayName: member.displayName || request.auth.token?.name || "LA_OS",
+    memberId: memberProfile.memberId || "",
+    memberDisplayName: memberProfile.displayName || request.auth.token?.name || "LA_OS",
     signalType,
     signalLabel: signalTypeLabel(signalType),
     comment,
@@ -281,7 +283,7 @@ async function submitMemberSignalHandler(request) {
     isDeleted: false,
     deletedAt: null,
     deletedBy: null,
-    environment: member.environment || "prod",
+    environment: memberProfile.environment || "prod",
     createdAt: now,
     updatedAt: now,
   };
