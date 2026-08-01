@@ -1,0 +1,53 @@
+/* v0.02 logo, flyer, SIGNAL and IDENTITY refinements */
+.kicker { font-size: 11px; }
+.modal-backdrop { animation: modal-backdrop-in .26s ease-out both; }
+.modal { animation: modal-flow-in .32s cubic-bezier(.22,.8,.25,1) both; }
+@keyframes modal-backdrop-in { from { background: rgba(10,10,12,0); } to { background: rgba(10,10,12,.5); } }
+@keyframes modal-flow-in { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .modal-backdrop, .modal { animation: none; } }
+.wordmark { display: block; line-height: 0; }
+.wordmark__image { display: block; width: clamp(156px, 16vw, 235px); height: auto; }
+
+/* フライヤーは縦横比を維持し、すべての媒体で全面を見せる。 */
+.event-feature__visual img { object-fit: contain; background: #f7f7f9; padding: 10px; }
+
+.system-card h3 small { color: var(--muted); font-size: 10px; }
+.system-card__closed { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font: 500 9px var(--mono); letter-spacing: .1em; }
+
+.signal-form label { display: block; margin-bottom: 15px; }
+.signal-form select { width: 100%; margin-top: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 0; background: #fff; color: var(--ink); font: 11px var(--font); }
+.signal-form output { display: block; min-height: 18px; margin-top: 8px; color: var(--pink); font-size: 10px; }
+.signal-form__bar { width: 100%; border: 0; cursor: pointer; }
+.signal-form__bar:disabled { background: #aaa; cursor: not-allowed; }
+.signal__copy { margin-top: 19px; color: var(--muted); font-size: 12px; line-height: 2; }
+.signal__all-artists { margin: 18px 0 0; }
+.signal__note { margin: 12px 0 0; color: var(--muted); font-size: 10px; line-height: 1.8; }
+
+.identity__story { position: relative; }
+.monolith--identity { display: block; margin: 30px auto 0; }
+.identity__story.is-switching .identity__brand { animation: identity-noise .12s steps(2) infinite; }
+.identity__tagline { margin-top: 30px; color: var(--pink); font: 500 10px var(--mono); letter-spacing: .11em; }
+.identity__reveal:not([hidden]) { animation: identity-reveal-in .8s cubic-bezier(.2,.75,.25,1) both; }
+.identity__reveal.is-closing { animation: identity-reveal-out .58s ease-in both; }
+@keyframes identity-noise { 50% { opacity: .55; letter-spacing: -.02em; transform: translateX(1px); } }
+@keyframes identity-reveal-in { from { opacity: 0; transform: translateY(34px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes identity-reveal-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-12px); } }
+
+/* SIGNAL送信中のように、根元から上部へマゼンタ光が走るモノリス。 */
+.monolith--signal { overflow: hidden; }
+.monolith--signal::before { content: ""; position: absolute; z-index: 1; right: 12%; bottom: -38%; left: 12%; height: 44%; background: linear-gradient(to top, rgba(220,35,112,0), rgba(255,109,174,.95) 48%, rgba(255,255,255,.9) 58%, rgba(220,35,112,0)); filter: blur(3px); animation: signal-transmit 2.6s ease-in-out infinite; }
+.monolith--signal::after { z-index: 2; }
+@keyframes signal-transmit { 0% { bottom: -42%; opacity: 0; } 13% { opacity: .85; } 72% { opacity: .72; } 100% { bottom: 106%; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .monolith--signal::before { animation: none; bottom: 30%; opacity: .42; } }
+
+@media (max-width: 680px) { .wordmark__image { width: 155px; } .event-feature__visual img { padding: 7px; } }
+
+/* 添付キービジュアル。コピーは上部、モノリスは中央に残す。 */
+.hero { isolation: isolate; background: #fafafd; }
+.hero__visual { position: absolute; z-index: 0; inset: 0; background: linear-gradient(to bottom, rgba(255,255,255,.85) 0%, rgba(255,255,255,.36) 35%, rgba(255,255,255,.05) 62%, rgba(255,255,255,.18) 100%), url("assets/hero-monolith.png") center center / cover no-repeat; }
+.hero::after { display: none; }
+.hero__copy { align-self: start; margin-top: clamp(70px, 12vh, 128px); }
+.hero__logo { display: block; width: clamp(270px, 35vw, 550px); height: auto; margin: 0 auto 28px; }
+.button--share { margin-top: 18px; border-color: var(--pink); background: #fff; color: var(--pink); }
+.button--share:hover { box-shadow: 0 8px 18px rgba(220,35,112,.18); }
+@media (max-width: 680px) { .hero__visual { background-position: 53% center; } .hero__copy { margin-top: 82px; } .hero__logo { width: min(450px, calc(100vw - 40px)); margin-bottom: 24px; } }

@@ -1,0 +1,17 @@
+.hero-logo {
+  width: min(100%, 920px);
+  line-height: 0;
+}
+
+.hero-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 22px rgba(56, 245, 255, .16));
+}
+
+@media (max-width: 719px) {
+  .hero-logo {
+    width: min(100%, 560px);
+  }
+}
