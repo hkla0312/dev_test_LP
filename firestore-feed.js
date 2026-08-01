@@ -7,6 +7,22 @@
   let events = [];
   let artists = [];
   let settings = {};
+  let artistSignals = [];
+  const SIGNAL_AXES = ["vocal", "performance", "emotion", "character", "worldview", "visual"];
+  const SIGNAL_AXIS_WEIGHTS = { song: { vocal: 70, emotion: 30 }, stage: { performance: 60, worldview: 25, visual: 15 }, character: { character: 70, worldview: 20, emotion: 10 } };
+
+  const toMillis = value => value?.toMillis ? value.toMillis() : Number(value?.seconds || 0) * 1000;
+  const enrichArtists = source => source.map(artist => {
+    const key = String(artist.id || artist.artistKey || "");
+    const signals = artistSignals.filter(signal => String(signal.artistId || signal.artistKey || "") === key);
+    const signalAnalytics = signals.reduce((result, signal) => {
+      const weights = SIGNAL_AXIS_WEIGHTS[String(signal.signalType || "")] || {};
+      SIGNAL_AXES.forEach(axis => { result[axis] += Number(weights[axis] || 0); });
+      return result;
+    }, { vocal: 0, performance: 0, emotion: 0, character: 0, worldview: 0, visual: 0 });
+    const signalComments = signals.filter(signal => signal.source !== "lp_public").slice().sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)).map(signal => signal.commentSummary || signal.comment || "").filter(Boolean).slice(0, 5);
+    return { ...artist, signalAnalytics, signalComments };
+  });
 
   const showEventEmpty = () => {
     $("#event-title").textContent = "EVENT INFORMATION COMING SOON";
@@ -21,7 +37,7 @@
 
   const render = () => {
     if (!events.length) showEventEmpty();
-    window.renderLPAdminData?.({ events, artists, settings });
+    window.renderLPAdminData?.({ events, artists: enrichArtists(artists), settings });
   };
 
   db.collection("events")
@@ -47,6 +63,18 @@
     }, error => {
       console.error("LP artist feed could not be loaded.", error);
       artists = [];
+      render();
+    });
+
+  db.collection("artistSignals")
+    .where("environment", "==", "prod")
+    .where("isDeleted", "==", false)
+    .onSnapshot(snapshot => {
+      artistSignals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(signal => signal.moderationStatus !== "blocked");
+      render();
+    }, error => {
+      console.error("LP signal feed could not be loaded.", error);
+      artistSignals = [];
       render();
     });
 

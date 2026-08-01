@@ -45,21 +45,25 @@ function artistCard(artist, index, all = false) {
 }
 
 function artistProfile(artist) {
-  const signals = artist.signals || artist.signalData || { song: 0, stage: 0, character: 0 };
-  const total = Number(signals.total || (Number(signals.song) + Number(signals.stage) + Number(signals.character))) || 0;
-  const values = [["歌が良い", Number(signals.song || 0)], ["ステージが良い", Number(signals.stage || 0)], ["キャラが良い", Number(signals.character || 0)]];
-  const social = [["X", artist.xUrl], ["YouTube", artist.youtubeUrl], ["Music", artist.musicUrl]].filter(([, url]) => isUrl(url));
+  activeProfileArtistId = String(artist.id || artist.artistKey || artist.name || "");
+  const analytics = artist.signalAnalytics || {};
+  const total = SIGNAL_AXIS_META.reduce((sum, [key]) => sum + Number(analytics[key] || 0), 0);
+  const values = SIGNAL_AXIS_META.map(([key, label, color]) => [key, label, Number(analytics[key] || 0), color]);
+  const social = [["X", "x", artist.xUrl], ["YouTube", "youtube", artist.youtubeUrl], ["Music", "music", artist.musicUrl]].filter(([, , url]) => isUrl(url));
   const image = artist.imageUrl ? `<img src="${escapeHTML(artist.imageUrl)}" alt="${escapeHTML(artist.name)}" style="object-position:${imagePosition(artist)}">` : "";
   const comments = Array.isArray(artist.signalComments || artist.comments) ? (artist.signalComments || artist.comments).slice(0, 5) : [];
-  modal(`<div class="profile-layout"><div class="profile-image">${image}</div><div class="profile-body"><p class="kicker">ARTIST PROFILE</p><h2>${escapeHTML(artist.name || "ARTIST")}</h2><p class="profile-role">${escapeHTML(displayRole(artist.role))}</p><p class="profile-text">${escapeHTML(artist.profile || artist.shortDescription || "プロフィール情報は準備中です。")}</p>${social.length ? `<h3>SNS / VIDEO</h3><div class="social-links">${social.map(([label, url]) => `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${label} ↗</a>`).join("")}</div>` : ""}<h3>SIGNAL DATA</h3>${total ? `<div class="signal-layout"><canvas class="signal-canvas" width="160" height="160" data-values="${values.map(([, value]) => value).join(",")}" aria-label="SIGNAL DATA"></canvas><ul class="signal-list">${values.map(([label, value]) => `<li><span>${label}</span><b>${Math.round(value / total * 100)}%</b></li>`).join("")}</ul></div>` : `<p class="profile-text">NO SIGNAL DATA</p>`}${comments.length ? `<div class="comment-chips">${comments.map(item => `<span class="comment-chip">#${escapeHTML(typeof item === "string" ? item.replace(/^#/, "") : item.comment || "")}</span>`).join("")}</div>` : ""}</div></div>`);
+  modal(`<div class="profile-layout"><div class="profile-image">${image}</div><div class="profile-body"><p class="kicker">ARTIST PROFILE</p><h2>${escapeHTML(artist.name || "ARTIST")}</h2><p class="profile-role">${escapeHTML(displayRole(artist.role))}</p><p class="profile-text">${escapeHTML(artist.profile || artist.shortDescription || "プロフィール情報は準備中です。")}</p>${social.length ? `<h3>SNS / VIDEO</h3><div class="social-links">${social.map(([label, service, url]) => `<a class="social-links__item social-links__item--${service}" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">${service === "youtube" ? "▶" : service === "music" ? "♪" : "𝕏"}</span>${escapeHTML(label)}</a>`).join("")}</div>` : ""}<h3>SIGNAL DATA</h3>${total ? `<div class="signal-layout"><canvas class="signal-canvas" width="280" height="280" data-values="${values.map(([, , value]) => value).join(",")}" aria-label="6軸のSIGNAL DATAグラフ"></canvas><ul class="signal-list">${values.map(([key, label, value]) => `<li data-axis="${key}"><span>${label}</span><b>${Math.round(value / total * 100)}%</b></li>`).join("")}</ul></div>` : `<p class="profile-text">NO SIGNAL DATA</p>`}${comments.length ? `<div class="comment-chips">${comments.map(item => `<span class="comment-chip">#${escapeHTML(typeof item === "string" ? item.replace(/^#/, "") : item.comment || "")}</span>`).join("")}</div>` : ""}</div></div>`);
   document.querySelectorAll(".signal-canvas").forEach(drawSignalChart);
 }
 
 function drawSignalChart(canvas) {
-  const context = canvas.getContext("2d"), values = canvas.dataset.values.split(",").map(Number), total = values.reduce((sum, value) => sum + value, 0);
-  let angle = -Math.PI / 2; const colors = ["#dc2370", "#55555c", "#d4d4da"];
-  context.clearRect(0, 0, 160, 160); values.forEach((value, index) => { const next = angle + value / total * Math.PI * 2; context.beginPath(); context.moveTo(80, 80); context.arc(80, 80, 56, angle, next); context.closePath(); context.fillStyle = colors[index]; context.fill(); angle = next; });
-  context.beginPath(); context.arc(80, 80, 34, 0, Math.PI * 2); context.fillStyle = "#fff"; context.fill(); context.fillStyle = "#111115"; context.font = "10px DM Mono"; context.textAlign = "center"; context.fillText("SIGNAL", 80, 77); context.font = "16px DM Mono"; context.fillText(String(total), 80, 96);
+  const context = canvas.getContext("2d"), values = canvas.dataset.values.split(",").map(Number), total = values.reduce((sum, value) => sum + value, 0) || 1, center = 140, radius = 65;
+  const point = (index, scale = 1) => { const angle = -Math.PI / 2 + Math.PI * 2 * index / values.length; return [center + Math.cos(angle) * radius * scale, center + Math.sin(angle) * radius * scale]; };
+  context.clearRect(0, 0, 280, 280); context.strokeStyle = "#e8e6ee"; context.lineWidth = 1;
+  [.25, .5, .75, 1].forEach(scale => { context.beginPath(); values.forEach((_, index) => { const [x, y] = point(index, scale); index ? context.lineTo(x, y) : context.moveTo(x, y); }); context.closePath(); context.stroke(); });
+  SIGNAL_AXIS_META.forEach(([, label, color], index) => { const [x, y] = point(index); context.beginPath(); context.moveTo(center, center); context.lineTo(x, y); context.strokeStyle = color; context.globalAlpha = .4; context.stroke(); context.globalAlpha = 1; const [lx, ly] = point(index, 1.22); context.fillStyle = color; context.font = "600 9px sans-serif"; context.textAlign = lx < center - 4 ? "right" : lx > center + 4 ? "left" : "center"; context.fillText(label, lx, ly + 3); });
+  context.beginPath(); values.forEach((value, index) => { const [x, y] = point(index, value / total); index ? context.lineTo(x, y) : context.moveTo(x, y); }); context.closePath(); context.fillStyle = "rgba(220,35,112,.24)"; context.fill(); context.strokeStyle = "#dc2370"; context.lineWidth = 2; context.stroke();
+  values.forEach((value, index) => { const [x, y] = point(index, value / total); context.beginPath(); context.arc(x, y, 3.5, 0, Math.PI * 2); context.fillStyle = SIGNAL_AXIS_META[index][2]; context.fill(); });
 }
 
 function renderArtists(artists) {
@@ -109,6 +113,10 @@ function applySettings(settings = {}) {
 window.renderLPAdminData = ({ events = [], artists = [], settings = {} }) => {
   window.LA_TERMINAL_EVENTS = events; window.LA_TERMINAL_ARTISTS = artists;
   const today = new Date().toISOString().slice(0, 10); renderArtists(artists.length ? artists : FALLBACK_ARTISTS); renderEvent(events.find(event => !event.eventDate || event.eventDate >= today) || events[0] || FALLBACK_EVENTS[0]); applySettings(settings);
+  if (activeProfileArtistId) {
+    const current = artists.find(artist => String(artist.id || artist.artistKey || artist.name || "") === activeProfileArtistId);
+    if (current) artistProfile(current);
+  }
 };
 
 function identityEffect() {
