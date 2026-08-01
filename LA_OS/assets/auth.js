@@ -102,6 +102,26 @@
     }
   };
 
+  const bootstrapMemberProfile = async (user, fallbackProfile = {}) => {
+    const functionsApi = getFunctionsApi();
+    if (!functionsApi || !user?.uid) {
+      return null;
+    }
+
+    try {
+      const callable = functionsApi.httpsCallable('bootstrapMemberProfile');
+      const response = await callable({
+        displayName: fallbackProfile.displayName || user.displayName || '',
+        email: fallbackProfile.email || user.email || '',
+        memberId: fallbackProfile.memberId || '',
+      });
+      return response?.data?.member || null;
+    } catch (error) {
+      console.warn('bootstrap member profile skipped', error);
+      return null;
+    }
+  };
+
   const buildAuthIssue = (error, actionLabel, context = {}) => {
     const helper = window.LAErrorReporting;
     const classified = helper?.classifyError
@@ -563,7 +583,56 @@
       updatedAt: timestamp,
     };
 
-    await db.collection('members').doc(user.uid).set(member);
+    const memberRef = db.collection('members').doc(user.uid);
+    const memberSnapshot = await memberRef.get();
+
+    if (memberSnapshot.exists) {
+      const existing = memberSnapshot.data() || {};
+      const patch = {
+        displayName: member.displayName,
+        updatedAt: timestamp,
+      };
+      await memberRef.update(patch);
+
+      const mergedMember = {
+        ...existing,
+        ...patch,
+        uid: existing.uid || user.uid,
+        memberId: existing.memberId || member.memberId,
+        email: existing.email || member.email,
+        emailVerified: existing.emailVerified ?? member.emailVerified,
+        currentProgress: existing.currentProgress ?? member.currentProgress,
+        requiredProgress: existing.requiredProgress ?? member.requiredProgress,
+        version: existing.version || member.version,
+        versionUpPending: existing.versionUpPending ?? member.versionUpPending,
+        archiveAccess: existing.archiveAccess ?? member.archiveAccess,
+        levelValue: existing.levelValue ?? member.levelValue,
+        levelLabel: existing.levelLabel || member.levelLabel,
+        accountStatus: existing.accountStatus || member.accountStatus,
+        environment: existing.environment || member.environment,
+      };
+
+      return createProfilePayload(mergedMember, fallbackProfile);
+    }
+
+    const bootstrapMember = await bootstrapMemberProfile(user, fallbackProfile);
+    if (bootstrapMember) {
+      return createProfilePayload(bootstrapMember, fallbackProfile);
+    }
+
+    try {
+      await memberRef.set(member);
+    } catch (error) {
+      if (String(error?.code || '') === 'permission-denied') {
+        await primeAuthToken(user);
+        await pause(1200);
+        const profile = await waitForMemberRecord(user, fallbackProfile, 15000);
+        if (profile) {
+          return profile;
+        }
+      }
+      throw error;
+    }
 
     try {
       await db.collection('memberIds').doc(memberIdDocId(member.memberId)).set({
@@ -625,7 +694,9 @@
       } catch (error) {
         lastError = error;
         if (String(error?.code || '') === 'permission-denied') {
-          break;
+          await primeAuthToken(user);
+          await pause(900);
+          continue;
         }
       }
 
@@ -759,28 +830,24 @@
         persistSession(profile, password);
         redirectToMember();
       } catch (firestoreError) {
-        if (String(firestoreError?.code || '') === 'permission-denied') {
-          try {
-            const profile = await waitForMemberRecord(result.user, fallbackProfile);
-            persistSession(profile, password);
-            redirectToMember();
-            return;
-          } catch (waitError) {
-            try {
-              await authInstance.signOut();
-            } catch {
-              // ignore
-            }
-            showAuthIssue(waitError, '登録');
-            return;
-          }
-        }
         try {
-          await result.user.delete();
-        } catch {
-          // ignore rollback failure
+          const profile = await waitForMemberRecord(result.user, fallbackProfile, 15000);
+          persistSession(profile, password);
+          redirectToMember();
+          return;
+        } catch (waitError) {
+          try {
+            await authInstance.signOut();
+          } catch {
+            // ignore
+          }
+          try {
+            await result.user.delete();
+          } catch {
+            // ignore rollback failure
+          }
+          showAuthIssue(waitError, '登録');
         }
-        showAuthIssue(firestoreError, '登録');
       }
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
