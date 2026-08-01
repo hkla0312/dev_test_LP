@@ -30,7 +30,9 @@
 }
 
 /* 被写体を切らず、登録済みのアーティスト写真全体を見せる。 */
-.profile-image img { object-fit: contain; object-position: center; background: #f3f3f5; }
+.artist-image { background: linear-gradient(145deg, color-mix(in srgb, var(--artist-theme, #f2f2f4) 62%, #fff), var(--artist-theme, #e9e9ed)); }
+.profile-image { background: linear-gradient(145deg, color-mix(in srgb, var(--artist-theme, #f3f3f5) 54%, #fff), var(--artist-theme, #f3f3f5)); }
+.profile-image img { object-fit: contain; object-position: center; background: transparent; }
 
 .system-card h3 small { color: var(--muted); font-size: 10px; }
 .system-card__closed { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font: 500 9px var(--mono); letter-spacing: .1em; }

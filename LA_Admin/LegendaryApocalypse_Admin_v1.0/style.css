@@ -18,3 +18,7 @@
 .report-row--resolved .report-code { background:#7b8a92; }
 .report-row--resolved .report-status { background:#eef3f6; color:#667784; }.report-summary{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .report-summary .tag{min-width:88px;justify-content:center}
+.artist-theme-tools{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--line,#e4e5e9)}
+.artist-theme-tools h2{margin:0 0 4px;font-size:15px}
+.artist-theme-tools .sub{margin:0;max-width:620px}
+@media(max-width:640px){.artist-theme-tools{align-items:flex-start;flex-direction:column}.artist-theme-tools .secondary{width:100%}}

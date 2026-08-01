@@ -17,7 +17,7 @@
     data: { events: [], artists: [], members: [], artistSignals: [], errorReports: [], adminLogs: [] },
     settings: { signalEnabled: true, systemEnabled: true }, unsubscribers: []
   };
-  const ACTIONS = ['EVENT_CREATE','EVENT_UPDATE','EVENT_ARCHIVE','EVENT_RESTORE','EVENT_DELETE','ARTIST_CREATE','ARTIST_UPDATE','ARTIST_DELETE','MEMBER_DELETE','PROGRESS_ADD','LICENSE_CHANGE','SIGNAL_DELETE','SIGNAL_RESTORE','ERROR_REPORT_RESOLVE'];
+  const ACTIONS = ['EVENT_CREATE','EVENT_UPDATE','EVENT_ARCHIVE','EVENT_RESTORE','EVENT_DELETE','ARTIST_CREATE','ARTIST_UPDATE','ARTIST_DELETE','ARTIST_THEME_COLOR_GENERATE','MEMBER_DELETE','PROGRESS_ADD','LICENSE_CHANGE','SIGNAL_DELETE','SIGNAL_RESTORE','ERROR_REPORT_RESOLVE'];
   state.filters = { eventSearch:'', eventStatus:'all', artistSearch:'', artistRole:'all', memberSearch:'', memberStatus:'active' };
 
   function toast(message, isError = false) {
@@ -144,7 +144,7 @@
     const filter = state.filters;
     const artists = state.data.artists.filter(artist => filterText(artist, ['artistKey','name','genre'], filter.artistSearch) && (filter.artistRole === 'all' || artist.role === filter.artistRole));
     const row = artist => `<tr><td>${escapeHtml(artist.artistKey || '—')}</td><td>${escapeHtml(artist.name)}</td><td>${escapeHtml(artist.role || 'FRESH')}</td><td>${Number(artist.appearanceCount || 0)}</td><td>${escapeHtml(artist.genre || '—')}</td><td>${artist.environment === 'prod' && artist.lpVisible ? '公開中' : 'DEV / 非公開'}</td><td><button class="primary compact" data-artist-edit="${artist.id}">編集</button>${actionMenu(`<button class="secondary" data-artist-publish="${artist.id}">${artist.environment === 'prod' ? 'DEVへ戻す' : '本番公開'}</button><button class="danger" data-artist-delete="${artist.id}">削除</button>`)}</td></tr>`;
-    return pageHead('ARTIST', 'アーティスト管理', '<button class="primary" data-action="artist-new">新規アーティストを追加</button>') + `<section class="card"><div class="list-filter"><input id="artistSearch" value="${escapeHtml(filter.artistSearch)}" placeholder="名前・キー・ジャンルで検索"><select id="artistRole"><option value="all">ロール：すべて</option>${['REGULAR','CORE','FRESH','ORGANIZER'].map(role => `<option ${filter.artistRole === role ? 'selected' : ''}>${role}</option>`).join('')}</select><span class="filter-count">${artists.length}件</span></div>${table(artists, ['ARTIST KEY','名前','ロール','出演回数','ジャンル','LP','操作'], row)}</section>`;
+    return pageHead('ARTIST', 'アーティスト管理', '<button class="primary" data-action="artist-new">新規アーティストを追加</button>') + `<section class="card"><div class="artist-theme-tools"><div><h2>画像テーマカラー</h2><p class="sub">画像から主要な色を抽出し、LPのアーティスト画像背景へ反映します。既存画像にも一括で適用できます。</p></div><button class="secondary" type="button" data-action="artist-theme-generate">登録済み画像から一括生成</button></div><div class="list-filter"><input id="artistSearch" value="${escapeHtml(filter.artistSearch)}" placeholder="名前・キー・ジャンルで検索"><select id="artistRole"><option value="all">ロール：すべて</option>${['REGULAR','CORE','FRESH','ORGANIZER'].map(role => `<option ${filter.artistRole === role ? 'selected' : ''}>${role}</option>`).join('')}</select><span class="filter-count">${artists.length}件</span></div>${table(artists, ['ARTIST KEY','名前','ロール','出演回数','ジャンル','LP','操作'], row)}</section>`;
   }
   function memberPage() {
     const filter = state.filters;
@@ -162,7 +162,7 @@
   function formValue(form) { const values = Object.fromEntries(new FormData(form)); ['advancePrice','doorPrice','streamingPrice','specialAppearanceCount'].forEach(key => { if (key in values) values[key] = Number(values[key] || 0); }); values.lpVisible = values.lpVisible === 'true'; return values; }
   function eventForm(event = {}) { return `<form id="eventForm"><div class="form-grid"><label class="field">タイトル<input name="title" required value="${escapeHtml(event.title)}"></label><label class="field">開催日<input name="eventDate" type="date" required value="${escapeHtml(event.eventDate)}"></label><label class="field">会場<input name="venue" required value="${escapeHtml(event.venue)}"></label><label class="field">OPEN<input name="openTime" type="time" value="${escapeHtml(event.openTime)}"></label><label class="field">START<input name="startTime" type="time" value="${escapeHtml(event.startTime)}"></label><label class="field">前売料金<input name="advancePrice" type="number" min="0" value="${Number(event.advancePrice || 0)}"></label><label class="field">当日料金<input name="doorPrice" type="number" min="0" value="${Number(event.doorPrice || 0)}"></label><label class="field">配信料金<input name="streamingPrice" type="number" min="0" value="${Number(event.streamingPrice || 0)}"></label><label class="field">ツイキャスURL<input name="streamingUrl" type="url" value="${escapeHtml(event.streamingUrl)}"></label><label class="field">LP公開<select name="lpVisible"><option value="true" ${event.lpVisible !== false ? 'selected' : ''}>ON</option><option value="false" ${event.lpVisible === false ? 'selected' : ''}>OFF</option></select></label><div class="wide"><h3>出演アーティスト</h3><button class="secondary" type="button" data-action="event-artist-picker">アーティストを追加</button><div id="eventArtists" class="artist-list">${eventArtistTags(event.artistIds || [])}</div></div></div></form>`; }
   function eventArtistTags(ids) { return ids.map(id => state.data.artists.find(artist => artist.id === id)).filter(Boolean).map(artist => `<span class="artist-tag" draggable="true" data-artist-id="${artist.id}">${escapeHtml(artist.name)} <button type="button" class="text-button" data-event-artist-remove="${artist.id}" aria-label="${escapeHtml(artist.name)}を外す">×</button></span>`).join('') || '<p class="sub">出演アーティストは未設定です。</p>'; }
-  function artistForm(artist = {}) { const roles = ['REGULAR','CORE','FRESH','ORGANIZER']; return `<form id="artistForm"><div class="form-grid"><label class="field">名前<input name="name" required value="${escapeHtml(artist.name)}"></label><label class="field">ロール<select name="role">${roles.map(role => `<option ${artist.role === role ? 'selected' : ''}>${role}</option>`).join('')}</select></label><label class="field">ジャンル<input name="genre" value="${escapeHtml(artist.genre)}" placeholder="自由入力"></label><label class="field">過去出演特別カウント<input name="specialAppearanceCount" type="number" min="0" value="${Number(artist.specialAppearanceCount || 0)}"></label><label class="field wide">プロフィール<textarea name="profile">${escapeHtml(artist.profile)}</textarea></label><label class="field">X<input name="xUrl" type="url" value="${escapeHtml(artist.xUrl)}"></label><label class="field">YouTube<input name="youtubeUrl" type="url" value="${escapeHtml(artist.youtubeUrl)}"></label><label class="field">SNSリンク1<input name="snsUrl1" type="url" value="${escapeHtml(artist.snsUrl1)}"></label><label class="field">SNSリンク2<input name="snsUrl2" type="url" value="${escapeHtml(artist.snsUrl2)}"></label><label class="field">LP掲載<select name="lpVisible"><option value="true" ${artist.lpVisible !== false ? 'selected' : ''}>ON</option><option value="false" ${artist.lpVisible === false ? 'selected' : ''}>OFF</option></select></label><label class="field">アイコン画像<input name="image" type="file" accept="image/png,image/jpeg,image/webp"></label></div><p class="sub">イベント出演回数と過去出演特別カウントを合算して表示します。</p></form>`; }
+  function artistForm(artist = {}) { const roles = ['REGULAR','CORE','FRESH','ORGANIZER']; const themeColor = normalizeThemeColor(artist.imageThemeColor) || '#e8e8ec'; return `<form id="artistForm"><div class="form-grid"><label class="field">名前<input name="name" required value="${escapeHtml(artist.name)}"></label><label class="field">ロール<select name="role">${roles.map(role => `<option ${artist.role === role ? 'selected' : ''}>${role}</option>`).join('')}</select></label><label class="field">ジャンル<input name="genre" value="${escapeHtml(artist.genre)}" placeholder="自由入力"></label><label class="field">過去出演特別カウント<input name="specialAppearanceCount" type="number" min="0" value="${Number(artist.specialAppearanceCount || 0)}"></label><label class="field wide">プロフィール<textarea name="profile">${escapeHtml(artist.profile)}</textarea></label><label class="field">X<input name="xUrl" type="url" value="${escapeHtml(artist.xUrl)}"></label><label class="field">YouTube<input name="youtubeUrl" type="url" value="${escapeHtml(artist.youtubeUrl)}"></label><label class="field">SNSリンク1<input name="snsUrl1" type="url" value="${escapeHtml(artist.snsUrl1)}"></label><label class="field">SNSリンク2<input name="snsUrl2" type="url" value="${escapeHtml(artist.snsUrl2)}"></label><label class="field">LP掲載<select name="lpVisible"><option value="true" ${artist.lpVisible !== false ? 'selected' : ''}>ON</option><option value="false" ${artist.lpVisible === false ? 'selected' : ''}>OFF</option></select></label><label class="field">アーティスト画像<input name="image" type="file" accept="image/png,image/jpeg,image/webp"></label><label class="field">画像テーマカラー<input name="imageThemeColor" type="color" value="${themeColor}"></label></div><p class="sub">画像をアップロードするとテーマカラーを自動生成します。必要な場合のみ手動で調整してください。</p><p class="sub">イベント出演回数と過去出演特別カウントを合算して表示します。</p></form>`; }
   async function nextArtistKey() { return state.db.runTransaction(async transaction => { const ref = state.db.collection('counters').doc('artist'); const snap = await transaction.get(ref); const number = Number(snap.exists ? snap.data().value || 0 : 0) + 1; transaction.set(ref, { value: number }, { merge: true }); return `ART-${String(number).padStart(4,'0')}`; }); }
   async function uploadImage(file, folder) {
     if (!file) return null;
@@ -170,6 +170,47 @@
     const ref = state.storage.ref().child(`${folder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`);
     const task = ref.put(file, { contentType: file.type });
     return new Promise((resolve, reject) => task.on('state_changed', snapshot => setBanner(`画像をアップロード中：${Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100)}%`), reject, async () => { setBanner(''); resolve(await task.snapshot.ref.getDownloadURL()); }));
+  }
+  function normalizeThemeColor(value) { return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? String(value).toLowerCase() : ''; }
+  function imageToThemeColor(source) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        const size = 84, scale = Math.min(size / image.naturalWidth, size / image.naturalHeight, 1);
+        const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const context = canvas.getContext('2d', { willReadFrequently: true }); context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data, buckets = new Map();
+        for (let index = 0; index < pixels.length; index += 16) {
+          const red = pixels[index], green = pixels[index + 1], blue = pixels[index + 2], alpha = pixels[index + 3];
+          const max = Math.max(red, green, blue), min = Math.min(red, green, blue), saturation = max ? (max - min) / max : 0;
+          if (alpha < 220 || (max > 244 && min > 225) || max < 18) continue;
+          const key = [red, green, blue].map(value => Math.min(240, Math.round(value / 24) * 24)).join(',');
+          const luminance = (red * 0.2126 + green * 0.7152 + blue * 0.0722) / 255;
+          buckets.set(key, (buckets.get(key) || 0) + 0.45 + saturation * 1.3 + (luminance > 0.15 && luminance < 0.88 ? 0.25 : 0));
+        }
+        const selected = [...buckets.entries()].sort((a, b) => b[1] - a[1])[0];
+        if (!selected) { resolve('#e8e8ec'); return; }
+        resolve(`#${selected[0].split(',').map(value => Number(value).toString(16).padStart(2, '0')).join('')}`);
+      };
+      image.onerror = () => reject(new Error('theme-image-load-failed'));
+      image.src = source;
+    });
+  }
+  function themeColorFromFile(file) { return imageToThemeColor(URL.createObjectURL(file)).finally(() => URL.revokeObjectURL(file)); }
+  async function themeColorFromUrl(url) { const response = await fetch(url); if (!response.ok) throw new Error('theme-image-fetch-failed'); const blob = await response.blob(); return themeColorFromFile(blob); }
+  async function generateArtistThemeColors() {
+    const targets = state.data.artists.filter(artist => artist.imageUrl);
+    if (!targets.length) { toast('画像が登録されたアーティストがいません。', true); return; }
+    let updated = 0, failed = 0;
+    setBanner(`テーマカラーを生成中：0 / ${targets.length}`);
+    for (let index = 0; index < targets.length; index += 1) {
+      const artist = targets[index];
+      try { const color = await themeColorFromUrl(artist.imageUrl); await state.db.collection('artists').doc(artist.id).update({ imageThemeColor: color, updatedAt: serverTime() }); updated += 1; }
+      catch (error) { failed += 1; console.warn('画像テーマカラーを生成できませんでした。', artist.id, error); }
+      setBanner(`テーマカラーを生成中：${index + 1} / ${targets.length}`);
+    }
+    setBanner(''); await adminLog('ARTIST_THEME_COLOR_GENERATE', 'artist', '', `${updated}/${targets.length}`, '登録済み画像からテーマカラーを一括生成');
+    toast(failed ? `${updated}件を更新しました。${failed}件は画像を読み込めず未変更です。` : `${updated}件のテーマカラーを更新しました。`);
   }
   function openEvent(event) {
     const isNew = !event; const draft = event ? { ...event, artistIds: [...(event.artistIds || [])] } : { artistIds: [], lpVisible: true };
@@ -203,7 +244,8 @@
     modal(isNew ? '新規アーティスト' : 'アーティストを編集', artistForm(artist || { lpVisible:true, role:'FRESH' }), async () => {
       const form = $('#artistForm'), values = formValue(form); values.updatedAt = serverTime(); values.environment = artist ? artist.environment || state.environment : state.environment;
       const special = Number(values.specialAppearanceCount || 0), eventCount = state.data.events.filter(event => (event.artistIds || []).includes(artist && artist.id)).length; values.eventAppearanceCount = eventCount; values.appearanceCount = eventCount + special;
-      const file = form.elements.image.files[0]; if (file) values.imageUrl = await uploadImage(file, 'artists');
+      const file = form.elements.image.files[0]; if (file) { values.imageThemeColor = await themeColorFromFile(file); values.imageUrl = await uploadImage(file, 'artists'); }
+      values.imageThemeColor = normalizeThemeColor(values.imageThemeColor) || '#e8e8ec';
       if (artist) { await state.db.collection('artists').doc(artist.id).update(values); await adminLog('ARTIST_UPDATE','artist',artist.id,values.name,'アーティストを更新'); }
       else { values.artistKey = await nextArtistKey(); values.createdAt = serverTime(); const ref = await state.db.collection('artists').add(values); await adminLog('ARTIST_CREATE','artist',ref.id,values.name,'アーティストを作成'); }
       toast('アーティストを保存しました。');
@@ -213,6 +255,7 @@
   function bindPage() {
     $('[data-action="event-new"]') && ($('[data-action="event-new"]').onclick = () => openEvent());
     $('[data-action="artist-new"]') && ($('[data-action="artist-new"]').onclick = () => openArtist());
+    $('[data-action="artist-theme-generate"]') && ($('[data-action="artist-theme-generate"]').onclick = () => confirmAction('画像テーマカラーを一括生成', '画像を登録済みの全アーティストへ、主要色を抽出して保存します。LPにも順次反映されます。', generateArtistThemeColors, '生成する'));
     $$('[data-event-edit]').forEach(button => button.onclick = () => openEvent(state.data.events.find(item => item.id === button.dataset.eventEdit)));
     $$('[data-artist-edit]').forEach(button => button.onclick = () => openArtist(state.data.artists.find(item => item.id === button.dataset.artistEdit)));
     $$('[data-event-publish]').forEach(button => button.onclick = () => setEnvironment('events', state.data.events.find(item => item.id === button.dataset.eventPublish), state.data.events.find(item => item.id === button.dataset.eventPublish).environment === 'prod' ? 'dev' : 'prod'));

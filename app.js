@@ -29,6 +29,7 @@ function imagePosition(artist = {}) {
   const clamp = value => Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : 50));
   return `${clamp(artist.imageFocusX ?? focus.x)}% ${clamp(artist.imageFocusY ?? focus.y ?? 32)}%`;
 }
+function imageThemeColor(artist = {}) { return /^#[0-9a-f]{6}$/i.test(String(artist.imageThemeColor || "")) ? String(artist.imageThemeColor) : "#f3f3f5"; }
 
 function modal(content, className = "") {
   lastFocus = document.activeElement;
@@ -41,7 +42,7 @@ function closeModal() { $("#modal-root").innerHTML = ""; document.body.style.ove
 
 function artistCard(artist, index, all = false) {
   const image = artist.imageUrl ? `<img src="${escapeHTML(artist.imageUrl)}" alt="${escapeHTML(artist.name)}" loading="lazy" style="object-position:${imagePosition(artist)}">` : `<span>${escapeHTML(String(artist.name || "A").slice(0, 2))}</span>`;
-  return `<button type="button" class="artist-card" data-artist="${index}"><span class="artist-image">${image}</span><span class="artist-card-info"><small>${escapeHTML(displayRole(artist.role))}</small><strong>${escapeHTML(artist.name || "ARTIST")}</strong><em>${all ? "プロフィールを見る" : "タップで詳細表示"}</em></span></button>`;
+  return `<button type="button" class="artist-card" data-artist="${index}" style="--artist-theme:${escapeHTML(imageThemeColor(artist))}"><span class="artist-image">${image}</span><span class="artist-card-info"><small>${escapeHTML(displayRole(artist.role))}</small><strong>${escapeHTML(artist.name || "ARTIST")}</strong><em>${all ? "プロフィールを見る" : "タップで詳細表示"}</em></span></button>`;
 }
 
 function artistProfile(artist) {
@@ -52,7 +53,7 @@ function artistProfile(artist) {
   const social = [["X", "x", artist.xUrl], ["YouTube", "youtube", artist.youtubeUrl], ["Music", "music", artist.musicUrl]].filter(([, , url]) => isUrl(url));
   const image = artist.imageUrl ? `<img src="${escapeHTML(artist.imageUrl)}" alt="${escapeHTML(artist.name)}" style="object-position:${imagePosition(artist)}">` : "";
   const comments = Array.isArray(artist.signalComments || artist.comments) ? (artist.signalComments || artist.comments).slice(0, 5) : [];
-  modal(`<div class="profile-layout"><div class="profile-image">${image}</div><div class="profile-body"><p class="kicker">ARTIST PROFILE</p><h2>${escapeHTML(artist.name || "ARTIST")}</h2><p class="profile-role">${escapeHTML(displayRole(artist.role))}</p><p class="profile-text">${escapeHTML(artist.profile || artist.shortDescription || "プロフィール情報は準備中です。")}</p>${social.length ? `<h3>SNS / VIDEO</h3><div class="social-links">${social.map(([label, service, url]) => `<a class="social-links__item social-links__item--${service}" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">${service === "youtube" ? "▶" : service === "music" ? "♪" : "𝕏"}</span>${escapeHTML(label)}</a>`).join("")}</div>` : ""}<h3>SIGNAL DATA</h3>${total ? `<div class="signal-layout"><canvas class="signal-canvas" width="320" height="320" data-values="${values.map(([, , value]) => value).join(",")}" aria-label="6軸のSIGNAL DATAグラフ"></canvas><ul class="signal-list">${values.map(([key, label, value]) => `<li data-axis="${key}"><span>${label}</span><b>${Math.round(value / total * 100)}%</b></li>`).join("")}</ul></div>` : `<p class="profile-text">NO SIGNAL DATA</p>`}${comments.length ? `<div class="comment-chips">${comments.map(item => `<span class="comment-chip">#${escapeHTML(typeof item === "string" ? item.replace(/^#/, "") : item.comment || "")}</span>`).join("")}</div>` : ""}</div></div>`);
+  modal(`<div class="profile-layout"><div class="profile-image" style="--artist-theme:${escapeHTML(imageThemeColor(artist))}">${image}</div><div class="profile-body"><p class="kicker">ARTIST PROFILE</p><h2>${escapeHTML(artist.name || "ARTIST")}</h2><p class="profile-role">${escapeHTML(displayRole(artist.role))}</p><p class="profile-text">${escapeHTML(artist.profile || artist.shortDescription || "プロフィール情報は準備中です。")}</p>${social.length ? `<h3>SNS / VIDEO</h3><div class="social-links">${social.map(([label, service, url]) => `<a class="social-links__item social-links__item--${service}" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">${service === "youtube" ? "▶" : service === "music" ? "♪" : "𝕏"}</span>${escapeHTML(label)}</a>`).join("")}</div>` : ""}<h3>SIGNAL DATA</h3>${total ? `<div class="signal-layout"><canvas class="signal-canvas" width="320" height="320" data-values="${values.map(([, , value]) => value).join(",")}" aria-label="6軸のSIGNAL DATAグラフ"></canvas><ul class="signal-list">${values.map(([key, label, value]) => `<li data-axis="${key}"><span>${label}</span><b>${Math.round(value / total * 100)}%</b></li>`).join("")}</ul></div>` : `<p class="profile-text">NO SIGNAL DATA</p>`}${comments.length ? `<div class="comment-chips">${comments.map(item => `<span class="comment-chip">#${escapeHTML(typeof item === "string" ? item.replace(/^#/, "") : item.comment || "")}</span>`).join("")}</div>` : ""}</div></div>`);
   document.querySelectorAll(".signal-canvas").forEach(drawSignalChart);
 }
 
