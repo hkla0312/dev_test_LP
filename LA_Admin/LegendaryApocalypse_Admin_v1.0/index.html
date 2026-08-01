@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Legendary Apocalypse | ADMIN TERMINAL</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="admin-enhancements.css?v=20260726-ux1">
+  <link rel="stylesheet" href="admin-enhancements.css?v=20260802-onbox">
   <style>.review-nav{width:100%;padding:11px 14px;border:0;background:transparent;text-align:left;color:inherit;font:inherit;cursor:pointer}.review-nav:hover{background:rgba(56,245,255,.12)}.danmaku-review-table{width:100%;border-collapse:collapse}.danmaku-review-table th,.danmaku-review-table td{padding:10px;border-bottom:1px solid rgba(128,145,165,.25);text-align:left;vertical-align:top}.danmaku-review-table td:last-child{white-space:nowrap}.danmaku-review-table button{margin-right:6px}</style>
 </head>
 <body>
@@ -13,12 +13,12 @@
   </main>
   <div id="appView" class="app-shell" hidden>
     <aside class="sidebar"><a class="brand" href="#events">LA<br><small>ADMIN TERMINAL</small></a><nav aria-label="管理メニュー">
-      <button data-view="events" class="nav-item active">▣ <span>イベント</span></button><button data-view="artists" class="nav-item">♙ <span>アーティスト</span></button><button data-view="members" class="nav-item">♧ <span>メンバー</span></button><button data-view="progress" class="nav-item">✦ <span>PROGRESS</span></button><button data-view="signals" class="nav-item">◌ <span>SIGNAL</span></button><button data-view="reports" class="nav-item">✉ <span>報告</span></button><button data-view="logs" class="nav-item">☷ <span>変更履歴</span></button><button id="siteSettingsNav" class="nav-item" type="button">⚙ <span>サイト設定</span></button>
+      <button data-view="events" class="nav-item active">▣ <span>イベント</span></button><button data-view="artists" class="nav-item">♙ <span>アーティスト</span></button><button data-view="members" class="nav-item">♧ <span>メンバー</span></button><button data-view="progress" class="nav-item">✦ <span>PROGRESS</span></button><button data-view="signals" class="nav-item">◌ <span>SIGNAL</span></button><button data-view="onbox" class="nav-item">◉ <span>ONBOX 配信</span></button><button data-view="reports" class="nav-item">✉ <span>報告</span></button><button data-view="logs" class="nav-item">☷ <span>変更履歴</span></button><button id="siteSettingsNav" class="nav-item" type="button">⚙ <span>サイト設定</span></button>
       <button id="danmakuReviewNav" class="review-nav" type="button">DANMAKU REVIEW</button><button id="lpDanmakuReviewNav" class="review-nav" type="button">DANMAKU VIEW（LP用）</button>
     </nav></aside>
     <section class="workspace"><header class="topbar"><button id="menuButton" class="icon-button" aria-label="メニュー">☰</button><p class="terminal-label">ADMIN TERMINAL</p><div><label class="environment-control">ENV <select id="environmentToggle" aria-label="作業環境"><option value="dev">DEV</option><option value="prod">PROD</option></select></label><span id="systemStatus" class="tag">SYSTEM: --</span><span id="errorReportBadge" class="tag off">ERROR: 0</span><button id="operationsButton" class="text-button">運用設定</button><button id="themeButton" class="text-button">Dark</button><span id="adminName">ADMIN_USER</span><button id="logoutButton" class="text-button">ログアウト</button></div></header><div id="firebaseBanner" class="banner" hidden></div><div id="content" class="content" tabindex="-1"></div></section>
   </div>
   <div id="modalRoot"></div><div id="toastRoot" class="toast-root" aria-live="polite"></div>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
-  <script src="../../shared/danmaku-blocked-template.js"></script><script src="../../shared/error-reporting.js"></script><script src="firebase-config.js?v=20260802-utf8"></script><script src="app.js?v=20260802-utf8"></script><script src="danmaku-review.js?v=20260802-utf8"></script><script src="lp-danmaku-review.js?v=20260802-utf8"></script><script src="site-settings.js?v=20260802-utf8"></script>
+  <script src="../../shared/danmaku-blocked-template.js"></script><script src="../../shared/error-reporting.js"></script><script src="firebase-config.js?v=20260802-onbox"></script><script src="app.js?v=20260802-onbox"></script><script src="danmaku-review.js?v=20260802-onbox"></script><script src="lp-danmaku-review.js?v=20260802-onbox"></script><script src="site-settings.js?v=20260802-onbox"></script>
 </body></html>
