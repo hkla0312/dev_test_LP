@@ -128,6 +128,17 @@
     }
   };
 
+  const registerMemberAccount = async (payload) => {
+    const functionsApi = getFunctionsApi();
+    if (!functionsApi) {
+      throw Object.assign(new Error('Firebase Functions is not available.'), { code: 'failed-precondition' });
+    }
+
+    const callable = functionsApi.httpsCallable('registerMemberAccount');
+    const response = await callable(payload);
+    return response?.data || {};
+  };
+
   const buildAuthIssue = (error, actionLabel, context = {}) => {
     const helper = window.LAErrorReporting;
     const classified = helper?.classifyError
@@ -765,9 +776,7 @@
     if (stored) {
       if (displayNameInput && !displayNameInput.value) displayNameInput.value = stored.displayName || '';
       if (emailInput && !emailInput.value) emailInput.value = stored.email || '';
-      if (passwordInput && !passwordInput.value && stored.secret) passwordInput.value = stored.secret;
       if (loginEmailInput && !loginEmailInput.value) loginEmailInput.value = stored.email || '';
-      if (loginPasswordInput && !loginPasswordInput.value && stored.secret) loginPasswordInput.value = stored.secret;
     }
   };
 
@@ -833,51 +842,64 @@
     });
 
     try {
-      const result = await authInstance.createUserWithEmailAndPassword(email, password);
-      await result.user.updateProfile({ displayName });
-
-      try {
+      if (authInstance?.__isLocalAuth) {
+        const result = await authInstance.createUserWithEmailAndPassword(email, password);
+        await result.user.updateProfile({ displayName });
         const profile = await saveMemberRecord(result.user, fallbackProfile);
-        persistSession(profile, password);
+        persistSession(profile);
         redirectToMember();
-      } catch (firestoreError) {
-        try {
-          const profile = await waitForMemberRecord(result.user, fallbackProfile, 15000);
-          persistSession(profile, password);
-          redirectToMember();
-          return;
-        } catch (waitError) {
-          try {
-            await authInstance.signOut();
-          } catch {
-            // ignore
-          }
-          try {
-            await result.user.delete();
-          } catch {
-            // ignore rollback failure
-          }
-          showAuthIssue(waitError, '登録');
-        }
+        return;
       }
-    } catch (error) {
-      if (error.code === 'auth/email-already-in-use') {
-        const actuallyInUse = await isEmailActuallyInUse(email);
-        if (actuallyInUse === false) {
-          try {
-            const retry = await authInstance.createUserWithEmailAndPassword(email, password);
-            await retry.user.updateProfile({ displayName });
-            const profile = await saveMemberRecord(retry.user, fallbackProfile);
-            persistSession(profile, password);
-            redirectToMember();
-            return;
-          } catch (retryError) {
-            showAuthIssue(retryError, '登録');
-            return;
-          }
+
+      const result = await registerMemberAccount({ displayName, email, password });
+      const customToken = String(result?.customToken || '');
+      let credential = null;
+
+      if (customToken) {
+        try {
+          credential = await authInstance.signInWithCustomToken(customToken);
+        } catch (tokenError) {
+          console.warn('custom token sign-in skipped', tokenError);
         }
       }
 
+      if (!credential) {
+        const deadline = Date.now() + 15000;
+        let lastError = null;
+
+        while (Date.now() < deadline) {
+          try {
+            credential = await authInstance.signInWithEmailAndPassword(email, password);
+            break;
+          } catch (signInError) {
+            lastError = signInError;
+            const signInCode = String(signInError?.code || '');
+            if (!signInCode.startsWith('auth/')) {
+              throw signInError;
+            }
+            await pause(900);
+          }
+        }
+
+        if (!credential) {
+          throw lastError || Object.assign(new Error('Login is not ready yet.'), { code: 'failed-precondition' });
+        }
+      }
+
+      await primeAuthToken(credential.user);
+      const profile = result.member || await waitForMemberRecord(credential.user, fallbackProfile, 15000);
+      persistSession(profile);
+      redirectToMember();
+    } catch (error) {
+      const code = String(error?.code || '');
+      if (code === 'auth/email-already-in-use' || code === 'auth/email-already-exists' || code === 'functions/already-exists') {
+        showAuthIssue(error, '登録');
+        return;
+      }
+      if (code === 'failed-precondition' || code === 'functions/failed-precondition') {
+        showAuthIssue(error, '登録');
+        return;
+      }
       showAuthIssue(error, '登録');
     }
   }
@@ -923,7 +945,7 @@
       await primeAuthToken(credential.user);
       try {
         const profile = await waitForMemberRecord(credential.user, loadProfile() || {});
-        persistSession(profile, password);
+        persistSession(profile);
         redirectToMember();
       } catch (profileError) {
         try {
