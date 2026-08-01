@@ -20,6 +20,9 @@
   ];
 
   const randomize = (items) => [...items].sort(() => Math.random() - 0.5);
+  const artistImageUrl = (artist = {}) => ["imageUrl", "artistImageUrl", "iconUrl", "photoUrl", "avatarUrl", "image"]
+    .map(key => String(artist[key] || "").trim())
+    .find(url => /^https?:\/\//i.test(url)) || "";
 
   const summarizeSignalComment = (signal) => {
     const fallback = String(signal?.signalLabel || signal?.signalType || "SIGNAL").trim();
@@ -107,6 +110,7 @@
 
       return {
         ...artist,
+        imageUrl: artistImageUrl(artist),
         signalAnalytics: enrichAnalytics(key),
         signalComments,
         signalCount: items.length,
