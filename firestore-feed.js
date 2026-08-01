@@ -10,6 +10,9 @@
   let artistSignals = [];
   const SIGNAL_AXES = ["vocal", "performance", "emotion", "character", "worldview", "visual"];
   const SIGNAL_AXIS_WEIGHTS = { song: { vocal: 70, emotion: 30 }, stage: { performance: 60, worldview: 25, visual: 15 }, character: { character: 70, worldview: 20, emotion: 10 } };
+  const artistImageUrl = (artist = {}) => ["imageUrl", "artistImageUrl", "iconUrl", "photoUrl", "avatarUrl", "image"]
+    .map(key => String(artist[key] || "").trim())
+    .find(url => /^https?:\/\//i.test(url)) || "";
 
   const toMillis = value => value?.toMillis ? value.toMillis() : Number(value?.seconds || 0) * 1000;
   const enrichArtists = source => source.map(artist => {
@@ -21,7 +24,7 @@
       return result;
     }, { vocal: 0, performance: 0, emotion: 0, character: 0, worldview: 0, visual: 0 });
     const signalComments = signals.filter(signal => signal.source !== "lp_public").slice().sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)).map(signal => signal.commentSummary || signal.comment || "").filter(Boolean).slice(0, 5);
-    return { ...artist, signalAnalytics, signalComments };
+    return { ...artist, imageUrl: artistImageUrl(artist), signalAnalytics, signalComments };
   });
 
   const showEventEmpty = () => {
