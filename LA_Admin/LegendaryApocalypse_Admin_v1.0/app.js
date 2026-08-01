@@ -160,7 +160,7 @@
     $$('.nav-item[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === state.view));
     $('#content').innerHTML = pages[state.view](); bindPage();
   }
-  function formValue(form) { const values = Object.fromEntries(new FormData(form)); ['advancePrice','doorPrice','streamingPrice','specialAppearanceCount'].forEach(key => { if (key in values) values[key] = Number(values[key] || 0); }); values.lpVisible = values.lpVisible === 'true'; return values; }
+  function formValue(form) { const values = Object.fromEntries(new FormData(form)); Object.entries(values).forEach(([key, value]) => { if (value instanceof File) delete values[key]; }); ['advancePrice','doorPrice','streamingPrice','specialAppearanceCount'].forEach(key => { if (key in values) values[key] = Number(values[key] || 0); }); values.lpVisible = values.lpVisible === 'true'; return values; }
   function eventForm(event = {}) { return `<form id="eventForm"><div class="form-grid"><label class="field">タイトル<input name="title" required value="${escapeHtml(event.title)}"></label><label class="field">開催日<input name="eventDate" type="date" required value="${escapeHtml(event.eventDate)}"></label><label class="field">会場<input name="venue" required value="${escapeHtml(event.venue)}"></label><label class="field">OPEN<input name="openTime" type="time" value="${escapeHtml(event.openTime)}"></label><label class="field">START<input name="startTime" type="time" value="${escapeHtml(event.startTime)}"></label><label class="field">前売料金<input name="advancePrice" type="number" min="0" value="${Number(event.advancePrice || 0)}"></label><label class="field">当日料金<input name="doorPrice" type="number" min="0" value="${Number(event.doorPrice || 0)}"></label><label class="field">配信料金<input name="streamingPrice" type="number" min="0" value="${Number(event.streamingPrice || 0)}"></label><label class="field">ツイキャスURL<input name="streamingUrl" type="url" value="${escapeHtml(event.streamingUrl)}"></label><label class="field">LP公開<select name="lpVisible"><option value="true" ${event.lpVisible !== false ? 'selected' : ''}>ON</option><option value="false" ${event.lpVisible === false ? 'selected' : ''}>OFF</option></select></label><div class="wide"><h3>出演アーティスト</h3><button class="secondary" type="button" data-action="event-artist-picker">アーティストを追加</button><div id="eventArtists" class="artist-list">${eventArtistTags(event.artistIds || [])}</div></div></div></form>`; }
   function eventArtistTags(ids) { return ids.map(id => state.data.artists.find(artist => artist.id === id)).filter(Boolean).map(artist => `<span class="artist-tag" draggable="true" data-artist-id="${artist.id}">${escapeHtml(artist.name)} <button type="button" class="text-button" data-event-artist-remove="${artist.id}" aria-label="${escapeHtml(artist.name)}を外す">×</button></span>`).join('') || '<p class="sub">出演アーティストは未設定です。</p>'; }
   function artistImageUrl(artist = {}) { return ['imageUrl','artistImageUrl','iconUrl','photoUrl','avatarUrl','image'].map(key => String(artist[key] || '').trim()).find(url => /^https?:\/\//i.test(url)) || ''; }
@@ -176,7 +176,7 @@
   function normalizeThemeColor(value) { return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? String(value).toLowerCase() : ''; }
   function imageToThemeColor(source) {
     return new Promise((resolve, reject) => {
-      const image = new Image();
+      const image = new Image(); image.crossOrigin = 'anonymous';
       image.onload = () => {
         const size = 84, scale = Math.min(size / image.naturalWidth, size / image.naturalHeight, 1);
         const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
@@ -199,7 +199,10 @@
     });
   }
   function themeColorFromFile(file) { return imageToThemeColor(URL.createObjectURL(file)).finally(() => URL.revokeObjectURL(file)); }
-  async function themeColorFromUrl(url) { const response = await fetch(url); if (!response.ok) throw new Error('theme-image-fetch-failed'); const blob = await response.blob(); return themeColorFromFile(blob); }
+  async function themeColorFromUrl(url) {
+    try { const response = await fetch(url, { mode:'cors', cache:'no-store' }); if (!response.ok) throw new Error('theme-image-fetch-failed'); return themeColorFromFile(await response.blob()); }
+    catch (fetchError) { const ref = state.storage.refFromURL(url); if (typeof ref.getBlob !== 'function') throw fetchError; return themeColorFromFile(await ref.getBlob()); }
+  }
   async function generateArtistThemeColors() {
     const targets = state.data.artists.filter(artist => artistImageUrl(artist));
     if (!targets.length) { toast('画像が登録されたアーティストがいません。', true); return; }
