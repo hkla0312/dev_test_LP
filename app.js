@@ -14,6 +14,12 @@ const FALLBACK_ARTISTS = [
 const FALLBACK_EVENTS = [{ title: "LegendaryApocalypse", eventDate: "EVENT INFORMATION", venue: "---", openTime: "---", startTime: "---", advancePrice: "---" }];
 const $ = selector => document.querySelector(selector);
 let lastFocus;
+let activeProfileArtistId = "";
+const SIGNAL_DAILY_LIMIT = 3;
+const SIGNAL_DAILY_STORAGE_KEY = "la_terminal_signal_daily_limit_v1";
+const LP_SIGNAL_GUEST_KEY = "la_terminal_lp_signal_guest_v1";
+const LP_SIGNAL_ENDPOINT = "https://us-central1-laconsole-12985.cloudfunctions.net/submitLpSignal";
+const SIGNAL_AXIS_META = [["vocal", "歌唱力", "#e84393"], ["performance", "パフォーマンス", "#ff7b54"], ["emotion", "感情表現", "#f2b134"], ["character", "キャラクター", "#27ae8a"], ["worldview", "世界観", "#20a8c7"], ["visual", "ビジュアル", "#7867e7"]];
 
 function escapeHTML(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]); }
 function isUrl(value) { return /^https?:\/\//i.test(value || ""); }
@@ -116,18 +122,58 @@ function identityEffect() {
   }, 180);
 }
 
+function lpSignalGuestId() {
+  let value = localStorage.getItem(LP_SIGNAL_GUEST_KEY);
+  if (!value) { value = typeof crypto?.randomUUID === "function" ? crypto.randomUUID().replace(/-/g, "") : `${Date.now()}${Math.random().toString(36).slice(2)}`; localStorage.setItem(LP_SIGNAL_GUEST_KEY, value); }
+  return value;
+}
+function signalUsageKey() { return `${SIGNAL_DAILY_STORAGE_KEY}:${lpSignalGuestId()}`; }
+function signalUsage() {
+  try { const value = JSON.parse(localStorage.getItem(signalUsageKey()) || "{}"); return value.date === new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" }) ? Number(value.count || 0) : 0; } catch { return 0; }
+}
+function markSignalUsage() { localStorage.setItem(signalUsageKey(), JSON.stringify({ date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" }), count: signalUsage() + 1 })); }
+async function submitPublicLpSignal(payload) {
+  const response = await fetch(LP_SIGNAL_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data: payload }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || body?.error) throw new Error(body?.error?.message || "SIGNALの送信に失敗しました。");
+  return body?.data || {};
+}
+function updateSignalAccess() {
+  const form = $("#signal-form"), note = $(".signal__note");
+  if (!form) return;
+  const used = signalUsage(), remaining = Math.max(0, SIGNAL_DAILY_LIMIT - used), enabled = remaining > 0;
+  form.querySelectorAll("select, textarea, button").forEach(control => { control.disabled = !enabled; });
+  form.querySelectorAll("select, button").forEach(control => { control.disabled = !enabled; });
+  if (note) note.innerHTML = `SIGNAL送信は1日3回までです。（残り ${remaining} 回）<br>※テスト運用となります。予告なく会員専用機能にシフトする場合があります。`;
+}
 function initSignalForm() {
   const form = $("#signal-form"), select = $("#signal-artist-select"), status = $("#signal-status");
   if (!form) return;
   let selectedSignal = "";
-  form.querySelectorAll("[data-signal]").forEach(button => button.onclick = () => { selectedSignal = button.dataset.signal; form.querySelectorAll("[data-signal]").forEach(item => item.setAttribute("aria-pressed", String(item === button))); status.textContent = ""; });
-  form.onsubmit = event => { event.preventDefault(); if (!select.value || !selectedSignal) { status.textContent = "アーティストとSIGNALを選択してください。"; return; } status.textContent = "SIGNAL送信機能は公開準備中です。"; };
+  const setStatus = message => { status.textContent = message; };
+  form.querySelectorAll("[data-signal]").forEach(button => button.onclick = () => { selectedSignal = button.dataset.signal; form.querySelectorAll("[data-signal]").forEach(item => item.setAttribute("aria-pressed", String(item === button))); setStatus(""); });
+  form.onsubmit = async event => {
+    event.preventDefault();
+    if (signalUsage() >= SIGNAL_DAILY_LIMIT) { setStatus("本日のSIGNAL送信上限に達しています。"); updateSignalAccess(); return; }
+    if (!select.value || !selectedSignal) { setStatus("アーティストとSIGNALを選択してください。"); return; }
+    const controls = Array.from(form.querySelectorAll("select, button")); controls.forEach(control => { control.disabled = true; }); setStatus("SIGNAL送信中...");
+    try {
+      const result = await submitPublicLpSignal({ artistId: select.value, signalType: selectedSignal, guestId: lpSignalGuestId() });
+      localStorage.setItem(signalUsageKey(), JSON.stringify({ date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" }), count: SIGNAL_DAILY_LIMIT - Number(result.remaining ?? 0) })); selectedSignal = "";
+      form.querySelectorAll("[data-signal]").forEach(button => button.setAttribute("aria-pressed", "false"));
+      setStatus("SIGNALを送信しました。アーティストページへ反映します。"); updateSignalAccess();
+    } catch (error) { setStatus(error?.message || "SIGNALの送信に失敗しました。"); updateSignalAccess(); }
+  };
 }
 
 function init() {
   renderArtists(FALLBACK_ARTISTS); renderEvent(FALLBACK_EVENTS[0]); applySettings();
   $("#all-events-button").onclick = openAllEvents; $("#all-artists-button").onclick = openAllArtists; $("#signal-all-artists-button").onclick = openAllArtists; $("#identity-monolith").onclick = identityEffect;
-  initSignalForm();
+  initSignalForm(); updateSignalAccess();
   const share = $("#share-x-button");
   if (share) {
     const text = "CONNECT. CREATE. EVOLVE. #LATerminal";
