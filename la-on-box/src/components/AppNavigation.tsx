@@ -1,10 +1,6 @@
 const items = [
   ['HOME', 'ホーム', 'USER INFO'],
-  ['ENTITY', 'entity', '生命体'],
-  ['YOYAKU', 'yoyaku', '予約'],
-  ['SIGNAL', 'signal', 'SIGNAL'],
-  ['SETTINGS', '設定', 'SYSTEM'],
-  ['LOGOUT', 'ログアウト', 'END SESSION'],
+  ['ENERGY', 'energy', 'COMING SOON'],
 ] as const;
 
 export function AppNavigation() {
