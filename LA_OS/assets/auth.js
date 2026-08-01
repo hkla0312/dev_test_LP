@@ -944,7 +944,7 @@
       const credential = await authInstance.signInWithEmailAndPassword(email, password);
       await primeAuthToken(credential.user);
       try {
-        const profile = await waitForMemberRecord(credential.user, loadProfile() || {});
+        const profile = await bootstrapMemberProfile(credential.user, loadProfile() || {}) || await waitForMemberRecord(credential.user, loadProfile() || {});
         persistSession(profile);
         redirectToMember();
       } catch (profileError) {
