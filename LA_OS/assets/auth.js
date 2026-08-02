@@ -15,6 +15,9 @@
   let expiryTimer = null;
   let currentAuthIssue = null;
   let authBusy = false;
+  let authResolved = false;
+  let authLoaderDone = false;
+  let sessionEndInProgress = false;
 
   const loadProfile = () => {
     try {
@@ -41,6 +44,11 @@
     }
   };
 
+  const clearSessionTimer = () => {
+    window.clearTimeout(expiryTimer);
+    expiryTimer = null;
+  };
+
   const sanitizeSessionProfile = (profile = {}) => ({
     displayName: String(profile.displayName || '').trim(),
     email: String(profile.email || '').trim().toLowerCase(),
@@ -53,6 +61,11 @@
     sessionIssuedAt: Number(profile.sessionIssuedAt || 0),
     sessionExpiresAt: Number(profile.sessionExpiresAt || 0),
   });
+
+  const getSessionRemainingMs = (profile) => {
+    const expiresAt = Number(profile?.sessionExpiresAt || 0);
+    return Math.max(0, expiresAt - Date.now());
+  };
 
   const setMessage = (value, issue = null) => {
     const node = $('#authMessage');
@@ -455,20 +468,65 @@
   };
 
   const persistSession = (profile) => {
-    saveProfile(sanitizeSessionProfile(profile));
+    const now = Date.now();
+    const sessionProfile = sanitizeSessionProfile({
+      ...profile,
+      sessionIssuedAt: now,
+      sessionExpiresAt: now + SESSION_MS,
+    });
+    saveProfile(sessionProfile);
+    scheduleSessionExpiry(sessionProfile);
+  };
 
-    window.clearTimeout(expiryTimer);
-    expiryTimer = window.setTimeout(async () => {
+  const maybeHideAuthLoader = () => {
+    if (!authResolved || !authLoaderDone) {
+      return;
+    }
+
+    const loader = $('#authLoader');
+    const flash = $('#authLoaderFlash');
+    if (loader) {
+      loader.classList.add('is-hidden');
+      loader.classList.remove('is-flashing');
+    }
+    if (flash) {
+      flash.classList.remove('is-visible');
+    }
+  };
+
+  const scheduleSessionExpiry = (profile) => {
+    clearSessionTimer();
+    const remaining = getSessionRemainingMs(profile);
+    if (remaining <= 0) {
+      terminateSession({ redirect: true, signOut: Boolean(authInstance?.currentUser) });
+      return 0;
+    }
+
+    expiryTimer = window.setTimeout(() => {
+      terminateSession({ redirect: true, signOut: true });
+    }, remaining);
+    return remaining;
+  };
+
+  const terminateSession = async ({ redirect = true, clear = true, signOut = true } = {}) => {
+    if (sessionEndInProgress) {
+      return;
+    }
+    sessionEndInProgress = true;
+    clearSessionTimer();
+    if (clear) {
       clearProfile();
-      if (authInstance?.currentUser) {
-        try {
-          await authInstance.signOut();
-        } catch {
-          // ignore
-        }
+    }
+    if (signOut && authInstance?.currentUser) {
+      try {
+        await authInstance.signOut();
+      } catch {
+        // ignore
       }
+    }
+    if (redirect) {
       window.location.replace(LOGIN_URL);
-    }, SESSION_MS);
+    }
   };
 
   const initFirebase = () => {
@@ -859,8 +917,23 @@
     }
   };
 
-  const syncMemberPage = async () => {
+  const syncMemberPage = async ({ allowRedirect = false } = {}) => {
     const stored = loadProfile();
+
+    if (stored && !isSessionActive(stored)) {
+      await terminateSession({ redirect: true, clear: true, signOut: Boolean(authInstance?.currentUser) });
+      return;
+    }
+
+    if (stored && isSessionActive(stored)) {
+      scheduleSessionExpiry(stored);
+    }
+
+    if (!authResolved) {
+      hideShell();
+      return;
+    }
+
     if (authInstance?.currentUser && isSessionActive(stored)) {
       showShell();
       return;
@@ -868,13 +941,8 @@
 
     hideShell();
 
-    if (authInstance?.currentUser && !isSessionActive(stored)) {
-      try {
-        await authInstance.signOut();
-      } catch {
-        // ignore
-      }
-      clearProfile();
+    if (allowRedirect) {
+      await terminateSession({ redirect: true, clear: true, signOut: Boolean(authInstance?.currentUser) });
     }
   };
 
@@ -1122,16 +1190,7 @@
   }
 
   async function handleLogout() {
-    clearProfile();
-    window.clearTimeout(expiryTimer);
-    if (authInstance) {
-      try {
-        await authInstance.signOut();
-      } catch {
-        // ignore
-      }
-    }
-    redirectToLogin();
+    await terminateSession({ redirect: true, clear: true, signOut: true });
   }
 
   function bindLoginPage() {
@@ -1164,6 +1223,7 @@
     const flash = $('#authLoaderFlash');
     if (!loader || !stage) return;
 
+    authLoaderDone = false;
     const duration = 3000;
     const stages = [
       { at: 0.00, text: 'CONNECTING SESSION...' },
@@ -1207,7 +1267,13 @@
         return;
       }
 
+      authLoaderDone = true;
+      maybeHideAuthLoader();
+
       window.setTimeout(() => {
+        if (!authResolved) {
+          return;
+        }
         loader.classList.add('is-hidden');
         loader.classList.remove('is-flashing');
         if (flash) {
@@ -1243,14 +1309,16 @@
 
     if (isMemberPage) {
       bindMemberPage();
-      showShell();
-      syncMemberPage().catch(() => {});
+      hideShell();
+      syncMemberPage({ allowRedirect: false }).catch(() => {});
     }
 
     if (authInstance) {
       authInstance.onAuthStateChanged(async (user) => {
+        authResolved = true;
         if (isLoginPage) {
           if (authBusy) {
+            maybeHideAuthLoader();
             return;
           }
           const stored = loadProfile();
@@ -1262,29 +1330,17 @@
             }
             clearProfile();
           }
+          maybeHideAuthLoader();
           return;
         }
 
         if (isMemberPage) {
-          const stored = loadProfile();
-          if (user && isSessionActive(stored)) {
-            showShell();
-            return;
-          }
-
-          clearProfile();
-          hideShell();
-          if (user && !isSessionActive(stored)) {
-            try {
-              await authInstance.signOut();
-            } catch {
-              // ignore
-            }
-          }
-          if (!user || !isSessionActive(stored)) {
-            redirectToLogin();
-          }
+          await syncMemberPage({ allowRedirect: true });
+          maybeHideAuthLoader();
+          return;
         }
+
+        maybeHideAuthLoader();
       });
     }
 
