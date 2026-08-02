@@ -731,7 +731,7 @@
   }
 
   const SIGNAL_DAILY_LIMIT = 3;
-  const SIGNAL_DEMO_UNLIMITED = false;
+  const SIGNAL_DEMO_UNLIMITED = true;
   const SIGNAL_DAILY_STORAGE_KEY = "la_os_signal_daily_limit_v1";
   const getTokyoDateKey = () =>
     new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
@@ -757,7 +757,7 @@
 
     if (quotaStatus) quotaStatus.textContent = SIGNAL_DEMO_UNLIMITED ? "0 / ∞" : `${used} / ${SIGNAL_DAILY_LIMIT}`;
     if (quotaNote) quotaNote.textContent = SIGNAL_DEMO_UNLIMITED
-      ? "デモ期間中は何度でも送信できます。"
+      ? "一時的に送信上限を解除しています。"
       : remaining > 0
       ? `本日は${SIGNAL_DAILY_LIMIT}回まで送信できます。`
       : "本日の送信上限に達しています。";

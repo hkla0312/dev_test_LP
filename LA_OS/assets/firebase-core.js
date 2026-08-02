@@ -12,7 +12,7 @@
 
   const SIGNAL_DAILY_STORAGE_KEY = "la_os_signal_daily_limit_v1";
   const SIGNAL_DAILY_LIMIT = 3;
-  const SIGNAL_DEMO_UNLIMITED = false;
+  const SIGNAL_DEMO_UNLIMITED = true;
   const SIGNAL_EMOTIONS = [
     { value: "song", label: "歌が良い" },
     { value: "stage", label: "ステージが良い" },
@@ -90,7 +90,7 @@
     if (quotaStatus) quotaStatus.textContent = SIGNAL_DEMO_UNLIMITED ? "0 / ∞" : `${used} / ${SIGNAL_DAILY_LIMIT}`;
     if (quotaNote) {
       quotaNote.textContent = SIGNAL_DEMO_UNLIMITED
-        ? "デモ期間中は何度でも送信できます。"
+        ? "一時的に送信上限を解除しています。"
         : remaining > 0
         ? `本日は${SIGNAL_DAILY_LIMIT}回まで送信できます。`
         : "本日の送信上限に達しています。";
@@ -557,10 +557,7 @@
   }
 
   function watchPublishedEvents(db) {
-    db.collection("events")
-      .where("lpVisible", "==", true)
-      .where("environment", "==", "prod")
-      .onSnapshot(
+    db.collection("events").onSnapshot(
         (snapshot) => {
           publishedEvents = snapshot.docs
             .map((doc) => ({
