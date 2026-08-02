@@ -75,26 +75,8 @@
     return Number.isFinite(date.getTime()) ? date.getTime() : 0;
   };
 
-  const enrichAnalytics = (artistId) => {
-    const total = { ...DEFAULT_ANALYTICS };
-    const items = artistSignals
-      .filter(signal => String(signal.artistId || signal.artistKey || "") === String(artistId || ""))
-      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
-
-    for (const signal of items) {
-      const typeWeight = SIGNAL_WEIGHTS[String(signal.signalType || "").trim()] || {};
-      Object.entries(typeWeight).forEach(([axis, weight]) => {
-        total[axis] = (total[axis] || 0) + Number(weight || 0);
-      });
-
-      const comment = String(signal.comment || "").normalize("NFKC");
-      COMMENT_KEYWORDS.forEach(({ axis, pattern, weight }) => {
-        if (pattern.test(comment)) total[axis] = (total[axis] || 0) + weight;
-      });
-    }
-
-    return normalizeTotals(total);
-  };
+  // Radar values are canonical server aggregates. Do not score records in the browser.
+  const enrichAnalytics = (artist) => normalizeTotals(artist?.signalAggregate?.totals || {});
 
   const enrichArtists = (sourceArtists) => {
     return sourceArtists.map(artist => {
@@ -111,7 +93,7 @@
       return {
         ...artist,
         imageUrl: artistImageUrl(artist),
-        signalAnalytics: enrichAnalytics(key),
+        signalAnalytics: enrichAnalytics(artist),
         signalComments,
         signalCount: items.length,
       };

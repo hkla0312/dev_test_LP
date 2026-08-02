@@ -28,6 +28,29 @@
   let danmakuSubmitBound = false;
   let currentBackendIssue = null;
   let unsubscribeMemberSignals = null;
+  let pendingSignalSubmission = null;
+
+  function createSignalSubmissionId() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `os_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+  }
+
+  function setSignalSubmitState({ submitting = false, retry = false, message = "" } = {}) {
+    const submitButton = $("#signal-submit");
+    const retryButton = $("#signal-retry");
+    const status = $("#signal-submit-status");
+    if (submitButton) {
+      submitButton.disabled = submitting;
+      submitButton.textContent = submitting ? "送信中…" : "送信する";
+    }
+    if (retryButton) {
+      retryButton.hidden = !retry;
+      retryButton.disabled = submitting;
+    }
+    if (status) status.textContent = message;
+  }
 
   function getFunctionsApi() {
     return typeof firebase.functions === "function" ? firebase.functions() : null;
@@ -361,55 +384,14 @@
     return currentMember;
   }
 
-  async function writeSignalFallback(db, user, artistId, signalType, comment) {
-    const member = currentMember || await loadCurrentMember(user);
-    if (!member) {
-      throw new Error("member-not-found");
-    }
+  async function submitSignal(event, retry = false) {
+    event?.preventDefault();
+    event?.stopImmediatePropagation();
+    if (pendingSignalSubmission?.submitting) return;
 
-    const artistSnapshot = await db.collection("artists").doc(artistId).get();
-    if (!artistSnapshot.exists) {
-      throw new Error("artist-not-found");
-    }
-
-    const artist = artistSnapshot.data() || {};
-    const ref = await db.collection("artistSignals").add({
-      artistId,
-      artistKey: artist.artistKey || artistId,
-      artistName: artist.name || artist.artistKey || artistId,
-      artistThumbnailUrl: artist.thumbnailUrl || artist.imageUrl || "",
-      memberUid: user.uid,
-      memberId: member.memberId || "",
-      memberDisplayName: member.displayName || user.displayName || user.email || "LA_OS",
-      signalType,
-      signalLabel: SIGNAL_EMOTIONS.find((item) => item.value === signalType)?.label || signalType,
-      comment,
-      isDeleted: false,
-      deletedAt: null,
-      deletedBy: null,
-      environment: "prod",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-    return {
-      signalId: ref.id,
-      artistId,
-      artistName: artist.name || artist.artistKey || artistId,
-      artistThumbnailUrl: artist.thumbnailUrl || artist.imageUrl || "",
-      signalType,
-      signalLabel: SIGNAL_EMOTIONS.find((item) => item.value === signalType)?.label || signalType,
-      comment,
-      commentSummary: comment.length > 18 ? `${comment.slice(0, 18)}…` : comment,
-    };
-  }
-
-  async function submitSignal(event) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-
-    const artistId = $("#signal-artist-select")?.value || "";
-    const signalType = $("#signal-emotion-select")?.value || "";
-    const comment = $("#signal-comment")?.value.trim() || "";
+    const artistId = retry ? pendingSignalSubmission?.artistId : $("#signal-artist-select")?.value || "";
+    const signalType = retry ? pendingSignalSubmission?.signalType : $("#signal-emotion-select")?.value || "";
+    const comment = retry ? pendingSignalSubmission?.comment : $("#signal-comment")?.value.trim() || "";
     const used = getSignalUsageCount();
 
     if (!currentUser) {
@@ -425,19 +407,46 @@
       syncSignalQuota();
       return;
     }
-    if (!artistId || !SIGNAL_EMOTIONS.some((item) => item.value === signalType) || !comment) {
+    if (!artistId || !SIGNAL_EMOTIONS.some((item) => item.value === signalType)) {
       return;
     }
 
     const functionsApi = getFunctionsApi();
-    try {
-      let result = null;
-      if (functionsApi) {
-        const callable = functionsApi.httpsCallable("submitSignal");
-        result = await callable({ artistId, signalType, comment });
-      } else {
-        result = await writeSignalFallback(firebase.firestore(), currentUser, artistId, signalType, comment);
+    if (!functionsApi) {
+      const isSamePendingSubmission = pendingSignalSubmission
+        && pendingSignalSubmission.artistId === artistId
+        && pendingSignalSubmission.signalType === signalType
+        && pendingSignalSubmission.comment === comment;
+      if (!isSamePendingSubmission) {
+        pendingSignalSubmission = {
+          artistId, signalType, comment, submissionId: createSignalSubmissionId(), submitting: false,
+        };
       }
+      setSignalSubmitState({ retry: true, message: "送信先に接続できません。接続後に再送してください。" });
+      return;
+    }
+
+    const isSamePendingSubmission = pendingSignalSubmission
+      && pendingSignalSubmission.artistId === artistId
+      && pendingSignalSubmission.signalType === signalType
+      && pendingSignalSubmission.comment === comment;
+    if (!isSamePendingSubmission) {
+      pendingSignalSubmission = {
+        artistId, signalType, comment, submissionId: createSignalSubmissionId(), submitting: false,
+      };
+    }
+    pendingSignalSubmission.submitting = true;
+    setSignalSubmitState({ submitting: true, message: "SIGNALを送信しています…" });
+    try {
+      const callable = functionsApi.httpsCallable("submitSignal");
+      const result = await callable({
+        artistId,
+        signalType,
+        comment,
+        source: "os",
+        idempotencyKey: pendingSignalSubmission.submissionId,
+        clientRequestId: pendingSignalSubmission.submissionId,
+      });
       const payload = result?.data || result || {};
 
       const timestampText = new Date().toLocaleString("ja-JP", {
@@ -463,11 +472,16 @@
       }));
       toast("SIGNALを送信しました。");
       $("#signal-comment") && ($("#signal-comment").value = "");
+      pendingSignalSubmission = null;
+      setSignalSubmitState({ message: "送信しました。" });
       $("#signal-dialog")?.close();
     } catch (error) {
+      pendingSignalSubmission.submitting = false;
+      setSignalSubmitState({ retry: true, message: "送信に失敗しました。内容を変更せずに再送できます。" });
       const issue = buildBackendIssue(error, "signal", "SIGNAL送信", {
         artistId,
         signalType,
+        submissionId: pendingSignalSubmission.submissionId,
       });
       toast(issue.message, issue);
       showBackendErrorDialog(issue);
@@ -512,6 +526,7 @@
     if (!form || signalSubmitBound) return;
     signalSubmitBound = true;
     form.addEventListener("submit", submitSignal, true);
+    $("#signal-retry")?.addEventListener("click", () => submitSignal(null, true));
   }
 
   function bindDanmakuForm() {

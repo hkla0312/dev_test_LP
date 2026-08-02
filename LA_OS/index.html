@@ -186,8 +186,9 @@
             <label class="field"><span>カンジョウ</span><select id="signal-emotion-select" required></select></label>
             <div class="summary-box">送信回数: <span id="signal-limit-status">DEMO / ∞</span></div>
             <p class="counter-note" id="signal-limit-note">デモ期間中は何度でも送信できます。</p>
-            <label class="field"><span>コメント<small id="signal-counter">0 / 15</small></span><textarea id="signal-comment" maxlength="15" rows="3" required></textarea></label>
-            <div class="dialog-actions"><button class="ghost-button" id="signal-submit" type="submit">送信する</button></div>
+            <label class="field"><span>コメント（任意）<small id="signal-counter">0 / 15</small></span><textarea id="signal-comment" maxlength="15" rows="3"></textarea></label>
+            <p class="counter-note" id="signal-submit-status" role="status" aria-live="polite"></p>
+            <div class="dialog-actions"><button class="ghost-button" id="signal-submit" type="submit">送信する</button><button class="ghost-button" id="signal-retry" type="button" hidden>再送する</button></div>
           </form>
           <div class="signal-history" id="signal-history" aria-live="polite"></div>
         </section>
@@ -354,10 +355,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
     <script src="./firebase-config.js"></script>
-    <script src="./assets/auth.js?v=20260802k" defer></script>
+    <script src="./assets/auth.js?v=20260726i" defer></script>
     <script src="./assets/app.js?v=20260801e" defer></script>
     <script src="../shared/danmaku-blocked-template.js"></script>
     <script src="../shared/danmaku-moderation.js"></script>
