@@ -15,7 +15,7 @@ const FALLBACK_EVENTS = [{ title: "LegendaryApocalypse", eventDate: "EVENT INFOR
 const $ = selector => document.querySelector(selector);
 let lastFocus;
 let activeProfileArtistId = "";
-const SIGNAL_DAILY_LIMIT = 3;
+const SIGNAL_DAILY_LIMIT = 0;
 const SIGNAL_DAILY_STORAGE_KEY = "la_terminal_signal_daily_limit_v1";
 const LP_SIGNAL_GUEST_KEY = "la_terminal_lp_signal_guest_v1";
 const LP_SIGNAL_ENDPOINT = "https://us-central1-laconsole-12985.cloudfunctions.net/submitLpSignal";
@@ -154,10 +154,10 @@ async function submitPublicLpSignal(payload) {
 function updateSignalAccess() {
   const form = $("#signal-form"), note = $(".signal__note");
   if (!form) return;
-  const used = signalUsage(), remaining = Math.max(0, SIGNAL_DAILY_LIMIT - used), enabled = remaining > 0;
+  const used = signalUsage(), isLimited = SIGNAL_DAILY_LIMIT > 0, remaining = isLimited ? Math.max(0, SIGNAL_DAILY_LIMIT - used) : null, enabled = !isLimited || remaining > 0;
   form.querySelectorAll("select, textarea, button").forEach(control => { control.disabled = !enabled; });
   form.querySelectorAll("select, button").forEach(control => { control.disabled = !enabled; });
-  if (note) note.innerHTML = `SIGNAL送信は1日3回までです。（残り ${remaining} 回）<br>※デモバージョンです。会員専用SIGNALではアーティストにメッセージが届き、それもまたアーティストページの変化につながります。`;
+  if (note) note.innerHTML = `SIGNAL送信回数制限を一時解除中です。<br>※デモバージョンです。会員専用SIGNALではアーティストにメッセージが届き、それもまたアーティストページの変化につながります。`;
 }
 function initSignalForm() {
   const form = $("#signal-form"), select = $("#signal-artist-select"), status = $("#signal-status");
@@ -167,12 +167,12 @@ function initSignalForm() {
   form.querySelectorAll("[data-signal]").forEach(button => button.onclick = () => { selectedSignal = button.dataset.signal; form.querySelectorAll("[data-signal]").forEach(item => item.setAttribute("aria-pressed", String(item === button))); setStatus(""); });
   form.onsubmit = async event => {
     event.preventDefault();
-    if (signalUsage() >= SIGNAL_DAILY_LIMIT) { setStatus("本日のSIGNAL送信上限に達しています。"); updateSignalAccess(); return; }
+    if (SIGNAL_DAILY_LIMIT > 0 && signalUsage() >= SIGNAL_DAILY_LIMIT) { setStatus("本日のSIGNAL送信上限に達しています。"); updateSignalAccess(); return; }
     if (!select.value || !selectedSignal) { setStatus("アーティストとSIGNALを選択してください。"); return; }
     const controls = Array.from(form.querySelectorAll("select, button")); controls.forEach(control => { control.disabled = true; }); setStatus("SIGNAL送信中...");
     try {
       const result = await submitPublicLpSignal({ artistId: select.value, signalType: selectedSignal, guestId: lpSignalGuestId() });
-      localStorage.setItem(signalUsageKey(), JSON.stringify({ date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" }), count: SIGNAL_DAILY_LIMIT - Number(result.remaining ?? 0) })); selectedSignal = "";
+      if (SIGNAL_DAILY_LIMIT > 0) localStorage.setItem(signalUsageKey(), JSON.stringify({ date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" }), count: SIGNAL_DAILY_LIMIT - Number(result.remaining ?? 0) })); selectedSignal = "";
       form.querySelectorAll("[data-signal]").forEach(button => button.setAttribute("aria-pressed", "false"));
       setStatus("SIGNALを送信しました。アーティストページへ反映します。"); updateSignalAccess();
     } catch (error) { setStatus(error?.message || "SIGNALの送信に失敗しました。"); updateSignalAccess(); }
