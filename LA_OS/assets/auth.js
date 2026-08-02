@@ -1160,28 +1160,38 @@
   function playAuthLoaderSequence() {
     const loader = $('#authLoader');
     const stage = $('.auth-loader-stage');
-    const fill = $('.auth-loader-track i');
     const percent = $('#authLoaderPercent');
-    if (!loader || !stage || !fill) return;
+    const flash = $('#authLoaderFlash');
+    if (!loader || !stage) return;
 
     const phases = [
-      { text: 'CONNECTING SESSION...', delay: 120, width: '22%', percent: '22%' },
-      { text: 'VERIFYING PROFILE...', delay: 420, width: '58%', percent: '58%' },
-      { text: 'OPENING LA_OS...', delay: 760, width: '86%', percent: '86%' },
-      { text: 'SYSTEM ONLINE.', delay: 1120, width: '100%', percent: '100%' },
+      { text: 'CONNECTING SESSION...', delay: 120, percent: '18%' },
+      { text: 'VERIFYING PROFILE...', delay: 760, percent: '47%' },
+      { text: 'OPENING LA_OS...', delay: 1560, percent: '79%' },
+      { text: 'SYSTEM ONLINE.', delay: 2320, percent: '100%' },
     ];
 
     phases.forEach((phase) => {
       window.setTimeout(() => {
         stage.textContent = phase.text;
-        fill.style.transform = `scaleX(${Number.parseFloat(phase.percent) / 100})`;
         if (percent) percent.textContent = phase.percent;
       }, phase.delay);
     });
 
     window.setTimeout(() => {
+      if (flash) {
+        loader.classList.add('is-flashing');
+        flash.classList.add('is-visible');
+      }
+    }, 2860);
+
+    window.setTimeout(() => {
       loader.classList.add('is-hidden');
-    }, 1620);
+      loader.classList.remove('is-flashing');
+      if (flash) {
+        flash.classList.remove('is-visible');
+      }
+    }, 3060);
   }
 
   async function bootstrap() {
@@ -1208,7 +1218,8 @@
 
     if (isMemberPage) {
       bindMemberPage();
-      await syncMemberPage();
+      showShell();
+      syncMemberPage().catch(() => {});
     }
 
     if (authInstance) {

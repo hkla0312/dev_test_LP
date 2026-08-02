@@ -11,10 +11,21 @@
     <link rel="stylesheet" href="./assets/onbox-nav.css?v=20260728a" />
     <link rel="stylesheet" href="./assets/la-os-unified.css?v=20260728a" />
   </head>
-  <body>
-    <div class="ambient-grid" aria-hidden="true"></div>
-    <div class="noise-layer" aria-hidden="true"></div>
-    <div class="os-shell" hidden>
+    <body>
+      <div class="ambient-grid" aria-hidden="true"></div>
+      <div class="noise-layer" aria-hidden="true"></div>
+      <div class="auth-loader" id="authLoader" aria-live="polite" aria-label="LA_OS loading">
+        <div class="auth-loader-panel">
+          <strong class="auth-loader-title">LA_OS</strong>
+          <div class="auth-loader-orb" aria-hidden="true">
+            <span class="auth-loader-liquid"></span>
+          </div>
+          <span class="auth-loader-stage" id="authLoaderStage">OPENING SYSTEM...</span>
+          <div class="auth-loader-percent" id="authLoaderPercent">0%</div>
+        </div>
+      </div>
+      <div class="auth-loader-flash" id="authLoaderFlash" aria-hidden="true"></div>
+      <div class="os-shell" hidden>
       <p class="welcome-line" role="heading" aria-level="2">WELCOME TO LA_OS</p>
       <header class="system-header" aria-label="LA_OS header">
         <h1 id="header-identity">DANCHO v0.01</h1>

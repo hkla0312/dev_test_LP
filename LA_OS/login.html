@@ -13,12 +13,17 @@
     <div class="ambient-grid" aria-hidden="true"></div>
     <div class="noise-layer" aria-hidden="true"></div>
 
-    <div class="auth-loader" id="authLoader" aria-live="polite">
-      <strong>LA_OS</strong>
-      <span class="auth-loader-stage" id="authLoaderStage">INITIALIZING MEMBER TERMINAL...</span>
-      <div class="auth-loader-track" aria-hidden="true"><i id="authLoaderFill"></i></div>
-      <div class="auth-loader-percent" id="authLoaderPercent">0%</div>
+    <div class="auth-loader" id="authLoader" aria-live="polite" aria-label="LA_OS loading">
+      <div class="auth-loader-panel">
+        <strong class="auth-loader-title">LA_OS</strong>
+        <div class="auth-loader-orb" aria-hidden="true">
+          <span class="auth-loader-liquid"></span>
+        </div>
+        <span class="auth-loader-stage" id="authLoaderStage">CONNECTING SESSION...</span>
+        <div class="auth-loader-percent" id="authLoaderPercent">0%</div>
+      </div>
     </div>
+    <div class="auth-loader-flash" id="authLoaderFlash" aria-hidden="true"></div>
 
     <main class="auth-gate" id="authGate">
       <section class="auth-card">
