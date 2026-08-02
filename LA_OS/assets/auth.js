@@ -14,6 +14,7 @@
   let authInstance = null;
   let expiryTimer = null;
   let currentAuthIssue = null;
+  let authBusy = false;
 
   const loadProfile = () => {
     try {
@@ -49,6 +50,8 @@
     currentProgress: Number(profile.currentProgress ?? 38),
     requiredProgress: Number(profile.requiredProgress ?? 100),
     versionUpPending: Boolean(profile.versionUpPending),
+    sessionIssuedAt: Number(profile.sessionIssuedAt || 0),
+    sessionExpiresAt: Number(profile.sessionExpiresAt || 0),
   });
 
   const setMessage = (value, issue = null) => {
@@ -68,6 +71,42 @@
     } catch {
       // ignore
     }
+  };
+
+  const setAuthBusy = (busy) => {
+    authBusy = Boolean(busy);
+    const submitButtons = document.querySelectorAll('#authRegister button[type="submit"], #authLogin button[type="submit"], #registerSuccessEnter');
+    submitButtons.forEach((button) => {
+      button.disabled = authBusy;
+    });
+    document.documentElement.toggleAttribute('data-auth-busy', authBusy);
+  };
+
+  const isSessionActive = (profile) => {
+    const expiresAt = Number(profile?.sessionExpiresAt || 0);
+    return Boolean(expiresAt && expiresAt > Date.now());
+  };
+
+  const hideRegisterSuccessDialog = () => {
+    $('#registerSuccessDialog')?.setAttribute('hidden', '');
+  };
+
+  const showRegisterSuccessDialog = (profile) => {
+    const dialog = $('#registerSuccessDialog');
+    const title = $('#registerSuccessTitle');
+    const body = $('#registerSuccessBody');
+
+    if (title) {
+      title.textContent = 'LA_OSへようこそ。登録が完了しました。';
+    }
+
+    if (body) {
+      body.textContent = profile?.displayName
+        ? `${profile.displayName} さんの会員情報を確認できました。`
+        : '会員情報を確認できました。';
+    }
+
+    dialog?.removeAttribute('hidden');
   };
 
   const isValidRegistrationPassword = (value) => {
@@ -627,11 +666,6 @@
       return createProfilePayload(mergedMember, fallbackProfile);
     }
 
-    const bootstrapMember = await bootstrapMemberProfile(user, fallbackProfile);
-    if (bootstrapMember) {
-      return createProfilePayload(bootstrapMember, fallbackProfile);
-    }
-
     try {
       await memberRef.set(member);
 
@@ -647,6 +681,28 @@
       }
       throw error;
     }
+  };
+
+  const readMemberRecord = async (user, fallbackProfile = {}) => {
+    if (!user) {
+      return null;
+    }
+
+    if (authInstance?.__isLocalAuth || typeof firebase === 'undefined' || !firebase.firestore) {
+      const members = loadLocalMembers();
+      const existing = members[user.uid] || null;
+      return existing ? createProfilePayload(existing, fallbackProfile) : null;
+    }
+
+    await primeAuthToken(user);
+    const db = firebase.firestore();
+    const ref = db.collection('members').doc(user.uid);
+    const snapshot = await ref.get();
+    if (!snapshot.exists) {
+      return null;
+    }
+
+    return createProfilePayload(snapshot.data(), fallbackProfile);
   };
 
   const initAppCheck = () => {
@@ -703,24 +759,17 @@
 
   const waitForMemberRecord = async (user, fallbackProfile = {}, timeoutMs = 10000) => {
     if (!user) {
-      return createProfilePayload(null, fallbackProfile);
+      return null;
     }
 
-    if (authInstance?.__isLocalAuth || typeof firebase === 'undefined' || !firebase.firestore) {
-      return ensureMemberRecord(user, fallbackProfile);
-    }
-
-    await primeAuthToken(user);
-    const db = firebase.firestore();
-    const ref = db.collection('members').doc(user.uid);
     const deadline = Date.now() + Math.max(2000, Number(timeoutMs) || 0);
     let lastError = null;
 
     while (Date.now() < deadline) {
       try {
-        const snapshot = await ref.get();
-        if (snapshot.exists) {
-          return createProfilePayload(snapshot.data(), fallbackProfile);
+        const profile = await readMemberRecord(user, fallbackProfile);
+        if (profile) {
+          return profile;
         }
       } catch (error) {
         lastError = error;
@@ -773,9 +822,8 @@
   const syncLoginPage = async () => {
     const stored = loadProfile();
 
-    if (authInstance?.currentUser) {
-      redirectToMember();
-      return;
+    if (stored && !isSessionActive(stored)) {
+      clearProfile();
     }
 
     openPanel(null);
@@ -791,19 +839,41 @@
       if (emailInput && !emailInput.value) emailInput.value = stored.email || '';
       if (loginEmailInput && !loginEmailInput.value) loginEmailInput.value = stored.email || '';
     }
+
+    if (authInstance?.currentUser && !isSessionActive(stored)) {
+      try {
+        await authInstance.signOut();
+      } catch {
+        // ignore
+      }
+    }
   };
 
   const syncMemberPage = async () => {
-    if (authInstance?.currentUser) {
+    const stored = loadProfile();
+    if (authInstance?.currentUser && isSessionActive(stored)) {
       showShell();
       return;
     }
 
     hideShell();
+
+    if (authInstance?.currentUser && !isSessionActive(stored)) {
+      try {
+        await authInstance.signOut();
+      } catch {
+        // ignore
+      }
+      clearProfile();
+    }
   };
 
   async function handleRegister(event) {
     event.preventDefault();
+    if (authBusy) {
+      return;
+    }
+    setAuthBusy(true);
     setDebugFlag('data-laos-last-auth-action', 'register');
     setDebugFlag('data-laos-register-hit', Number(document.documentElement.getAttribute('data-laos-register-hit') || 0) + 1);
     setMessage('');
@@ -815,21 +885,25 @@
 
     if (!displayName) {
       setMessage('名前を入力してください。');
+      setAuthBusy(false);
       return;
     }
 
     if (!email) {
       setMessage('メアドを入力してください。');
+      setAuthBusy(false);
       return;
     }
 
     if (!isValidRegistrationPassword(password)) {
       setMessage('パスワードは英数字5文字以上で、英大文字と英小文字をそれぞれ1文字以上含めてください。');
+      setAuthBusy(false);
       return;
     }
 
     if (!authInstance) {
       setMessage('登録機能の準備ができていません。');
+      setAuthBusy(false);
       return;
     }
 
@@ -853,12 +927,17 @@
         let profile = null;
         try {
           profile = await saveMemberRecord(result.user, fallbackProfile);
+          profile = await waitForMemberRecord(result.user, profile || fallbackProfile, 15000);
         } catch (firestoreError) {
           console.warn('member record save skipped', firestoreError);
-          profile = fallbackProfile;
+          profile = null;
+        }
+        if (!profile) {
+          throw Object.assign(new Error('Member information is not ready yet.'), { code: 'member-record-not-ready' });
         }
         persistSession(profile);
-        redirectToMember();
+        showRegisterSuccessDialog(profile);
+        setMessage('');
         return;
       }
 
@@ -899,30 +978,43 @@
 
       await primeAuthToken(credential.user);
 
-      const profile = result.member || fallbackProfile;
-      try {
-        bootstrapMemberProfile(credential.user, fallbackProfile).catch(() => {});
-      } catch {
-        // ignore
+      const profile = await waitForMemberRecord(credential.user, result.member || fallbackProfile, 15000);
+      if (!profile) {
+        throw Object.assign(new Error('Member information is not ready yet.'), { code: 'member-record-not-ready' });
       }
       persistSession(profile);
-      redirectToMember();
+      showRegisterSuccessDialog(profile);
+      setMessage('');
     } catch (error) {
       const code = String(error?.code || '');
-      if (code === 'auth/email-already-in-use' || code === 'auth/email-already-exists' || code === 'functions/already-exists') {
-        showAuthIssue(error, '登録');
+      if (authInstance?.currentUser) {
+        try {
+          await authInstance.signOut();
+        } catch {
+          // ignore
+        }
+      }
+      clearProfile();
+
+      if (code === 'member-record-not-ready' || code === 'not-found' || code === 'permission-denied') {
+        setMessage('登録が完了しませんでした。会員情報を確認できませんでした。しばらくしてから再度お試しください。');
+        hideRegisterSuccessDialog();
         return;
       }
-      if (code === 'failed-precondition' || code === 'functions/failed-precondition') {
-        showAuthIssue(error, '登録');
-        return;
-      }
+
       showAuthIssue(error, '登録');
+      hideRegisterSuccessDialog();
+    } finally {
+      setAuthBusy(false);
     }
   }
 
   async function handleLogin(event) {
     event.preventDefault();
+    if (authBusy) {
+      return;
+    }
+    setAuthBusy(true);
     setDebugFlag('data-laos-last-auth-action', 'login');
     setDebugFlag('data-laos-login-hit', Number(document.documentElement.getAttribute('data-laos-login-hit') || 0) + 1);
     setMessage('');
@@ -933,6 +1025,7 @@
 
     if (!email || !password) {
       setMessage('メールアドレスとパスワードを入力してください。');
+      setAuthBusy(false);
       return;
     }
 
@@ -948,12 +1041,14 @@
         requiredProgress: 100,
         versionUpPending: false,
       });
+      setAuthBusy(false);
       redirectToMember();
       return;
     }
 
     if (!authInstance) {
       setMessage('ログイン機能の準備ができていません。');
+      setAuthBusy(false);
       return;
     }
 
@@ -975,24 +1070,39 @@
       let profile = null;
 
       try {
-        profile = await bootstrapMemberProfile(credential.user, fallbackProfile);
-      } catch (bootstrapError) {
-        console.warn('member bootstrap on login skipped', bootstrapError);
+        profile = await waitForMemberRecord(credential.user, fallbackProfile, 15000);
+      } catch (recordError) {
+        console.warn('member record on login not ready', recordError);
       }
 
       if (!profile) {
         try {
-          profile = await waitForMemberRecord(credential.user, fallbackProfile, 15000);
-        } catch (recordError) {
-          console.warn('member record on login not ready', recordError);
-          profile = fallbackProfile;
+          await authInstance.signOut();
+        } catch {
+          // ignore
         }
+        clearProfile();
+        setMessage('会員情報を確認できませんでした。しばらくしてから再度お試しください。');
+        return;
       }
 
       persistSession(profile);
       redirectToMember();
     } catch (error) {
+      const code = String(error?.code || '');
+      if (code === 'member-record-not-ready' || code === 'not-found' || code === 'permission-denied') {
+        try {
+          await authInstance?.signOut?.();
+        } catch {
+          // ignore
+        }
+        clearProfile();
+        setMessage('会員情報を確認できませんでした。しばらくしてから再度お試しください。');
+        return;
+      }
       showAuthIssue(error, 'ログイン');
+    } finally {
+      setAuthBusy(false);
     }
   }
 
@@ -1022,6 +1132,10 @@
 
     $('#authRegister')?.addEventListener('submit', handleRegister);
     $('#authLogin')?.addEventListener('submit', handleLogin);
+    $('#registerSuccessEnter')?.addEventListener('click', () => {
+      hideRegisterSuccessDialog();
+      redirectToMember();
+    });
   }
 
   function bindMemberPage() {
@@ -1084,21 +1198,35 @@
     if (authInstance) {
       authInstance.onAuthStateChanged(async (user) => {
         if (isLoginPage) {
-          if (user) {
-            redirectToMember();
+          const stored = loadProfile();
+          if (user && !isSessionActive(stored)) {
+            try {
+              await authInstance.signOut();
+            } catch {
+              // ignore
+            }
+            clearProfile();
           }
           return;
         }
 
         if (isMemberPage) {
-          if (user) {
+          const stored = loadProfile();
+          if (user && isSessionActive(stored)) {
             showShell();
             return;
           }
 
           clearProfile();
           hideShell();
-          if (!user) {
+          if (user && !isSessionActive(stored)) {
+            try {
+              await authInstance.signOut();
+            } catch {
+              // ignore
+            }
+          }
+          if (!user || !isSessionActive(stored)) {
             redirectToLogin();
           }
         }
