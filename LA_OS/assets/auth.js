@@ -943,18 +943,22 @@
     try {
       const credential = await authInstance.signInWithEmailAndPassword(email, password);
       await primeAuthToken(credential.user);
-      try {
-        const profile = await bootstrapMemberProfile(credential.user, loadProfile() || {}) || await waitForMemberRecord(credential.user, loadProfile() || {});
-        persistSession(profile);
-        redirectToMember();
-      } catch (profileError) {
-        try {
-          await authInstance.signOut();
-        } catch {
-          // ignore
-        }
-        showAuthIssue(profileError, 'ログイン');
-      }
+      const storedProfile = loadProfile() || {};
+      const profile = createProfilePayload({
+        uid: credential.user.uid,
+        displayName: credential.user.displayName || storedProfile.displayName || '',
+        email: credential.user.email || email,
+        emailVerified: Boolean(credential.user.emailVerified),
+        memberId: storedProfile.memberId || '',
+        version: storedProfile.version || 'v0.01',
+        archiveAccess: storedProfile.archiveAccess ?? true,
+        currentProgress: storedProfile.currentProgress ?? 38,
+        requiredProgress: storedProfile.requiredProgress ?? 100,
+        versionUpPending: storedProfile.versionUpPending ?? true,
+        xAccount: storedProfile.xAccount || '',
+      }, storedProfile);
+      persistSession(profile);
+      redirectToMember();
     } catch (error) {
       showAuthIssue(error, 'ログイン');
     }
