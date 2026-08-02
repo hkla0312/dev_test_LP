@@ -1164,34 +1164,59 @@
     const flash = $('#authLoaderFlash');
     if (!loader || !stage) return;
 
-    const phases = [
-      { text: 'CONNECTING SESSION...', delay: 120, percent: '18%' },
-      { text: 'VERIFYING PROFILE...', delay: 760, percent: '47%' },
-      { text: 'OPENING LA_OS...', delay: 1560, percent: '79%' },
-      { text: 'SYSTEM ONLINE.', delay: 2320, percent: '100%' },
+    const duration = 3000;
+    const stages = [
+      { at: 0.00, text: 'CONNECTING SESSION...' },
+      { at: 0.24, text: 'VERIFYING PROFILE...' },
+      { at: 0.55, text: 'OPENING LA_OS...' },
+      { at: 0.86, text: 'SYSTEM ONLINE.' },
     ];
+    const easeInOutCubic = (value) => (value < 0.5
+      ? 4 * value * value * value
+      : 1 - Math.pow(-2 * value + 2, 3) / 2);
 
-    phases.forEach((phase) => {
+    loader.style.setProperty('--loader-fill', '0');
+    if (percent) percent.textContent = '0%';
+    stage.textContent = stages[0].text;
+
+    let flashed = false;
+    const startedAt = window.performance?.now?.() || Date.now();
+
+    const tick = (now) => {
+      const elapsed = Math.min(now - startedAt, duration);
+      const rawProgress = Math.max(0, Math.min(1, elapsed / duration));
+      const progress = easeInOutCubic(rawProgress) * 100;
+      loader.style.setProperty('--loader-fill', progress.toFixed(2));
+      if (percent) percent.textContent = `${Math.round(progress)}%`;
+
+      const currentStage = [...stages].reverse().find((entry) => rawProgress >= entry.at) || stages[0];
+      if (stage.textContent !== currentStage.text) {
+        stage.textContent = currentStage.text;
+      }
+
+      if (rawProgress >= 0.96 && !flashed) {
+        flashed = true;
+        if (flash) {
+          loader.classList.add('is-flashing');
+          flash.classList.add('is-visible');
+        }
+      }
+
+      if (rawProgress < 1) {
+        window.requestAnimationFrame(tick);
+        return;
+      }
+
       window.setTimeout(() => {
-        stage.textContent = phase.text;
-        if (percent) percent.textContent = phase.percent;
-      }, phase.delay);
-    });
+        loader.classList.add('is-hidden');
+        loader.classList.remove('is-flashing');
+        if (flash) {
+          flash.classList.remove('is-visible');
+        }
+      }, 180);
+    };
 
-    window.setTimeout(() => {
-      if (flash) {
-        loader.classList.add('is-flashing');
-        flash.classList.add('is-visible');
-      }
-    }, 2860);
-
-    window.setTimeout(() => {
-      loader.classList.add('is-hidden');
-      loader.classList.remove('is-flashing');
-      if (flash) {
-        flash.classList.remove('is-visible');
-      }
-    }, 3060);
+    window.requestAnimationFrame(tick);
   }
 
   async function bootstrap() {
