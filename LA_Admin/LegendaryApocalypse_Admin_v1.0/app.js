@@ -16,7 +16,7 @@
     environment: localStorage.getItem('la-admin-environment') || 'dev',
     selectedMember: null, selectedArtist: null, showDeletedSignals: false,
     data: { events: [], artists: [], members: [], artistSignals: [], errorReports: [], adminLogs: [] },
-    settings: { signalEnabled: true, systemEnabled: true }, unsubscribers: []
+    settings: { signalEnabled: true, systemEnabled: true }, unsubscribers: [], collectionErrors: {}
   };
   const ACTIONS = ['EVENT_CREATE','EVENT_UPDATE','EVENT_ARCHIVE','EVENT_RESTORE','EVENT_DELETE','ARTIST_CREATE','ARTIST_UPDATE','ARTIST_DELETE','ARTIST_THEME_COLOR_GENERATE','MEMBER_DELETE','PROGRESS_ADD','LICENSE_CHANGE','SIGNAL_DELETE','SIGNAL_RESTORE','ERROR_REPORT_RESOLVE'];
   state.filters = { eventSearch:'', eventStatus:'all', artistSearch:'', artistRole:'all', memberSearch:'', memberStatus:'active' };
@@ -58,12 +58,13 @@
   function collectionSnapshot(name) {
     state.unsubscribers.push(state.db.collection(name).onSnapshot(snapshot => {
       state.data[name] = snapshot.docs.map(document => ({ id: document.id, ...document.data() }));
+      delete state.collectionErrors[name];
       if (name === 'errorReports') {
         const badge = $('#errorReportBadge');
         if (badge) { const open = state.data.errorReports.filter(report => report.status !== 'resolved').length; badge.textContent = `ERROR: ${open}`; badge.classList.toggle('off', open === 0); }
       }
       if (state.view) render();
-    }, error => { setBanner(errorMessage(error, 'データ取得')); }));
+    }, error => { state.collectionErrors[name] = error; setBanner(errorMessage(error, 'データ取得')); if (state.view) render(); }));
   }
   function level(progress) {
     let points = Math.max(0, Number(progress || 0)), current = 1, used = 0, needed = 5;
@@ -98,10 +99,14 @@
     return pageHead('MEMBER', 'メンバー情報はFirebase Authenticationと連携しています。') + `<section class="card">${table(state.data.members, ['MEMBER ID','表示名','VERSION','メール','認証','PROGRESS','ライセンス','状態','操作'], row)}</section>${current}`;
   }
   function reportPage() {
-    const reports = [...state.data.errorReports].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    const directReports = [...state.data.errorReports];
+    const reportIds = new Set(directReports.map(report => report.id));
+    const logFallbacks = state.data.adminLogs.filter(log => log.actionType === 'ERROR_REPORT_CREATE' && !reportIds.has(log.targetId)).map(log => ({ id:`log-${log.id}`, createdAt:log.createdAt, source:'SYSTEM LOG', area:'—', action:log.detail || 'エラー報告', errorCode:log.targetLabel || 'ERROR_REPORT_CREATE', message:'errorReportsの詳細を取得できないため、変更履歴から表示しています。', displayName:log.adminDisplayName || 'SYSTEM', status:'log-only', isLogFallback:true }));
+    const reports = [...directReports, ...logFallbacks].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
     const openCount = reports.filter(report => report.status !== 'resolved').length;
-    const row = report => `<tr><td>${timestampText(report.createdAt)}</td><td>${escapeHtml(report.source || 'LA_OS')}</td><td>${escapeHtml(report.area || '—')}</td><td>${escapeHtml(report.action || '—')}</td><td>${escapeHtml(report.errorCode || 'unknown')}</td><td>${escapeHtml(report.message || '—')}</td><td>${escapeHtml(report.displayName || report.memberId || '—')}</td><td>${escapeHtml(report.status || 'new')}</td><td>${report.status !== 'resolved' ? `<button class="secondary" data-report-resolve="${report.id}">解決済みにする</button>` : '<span class="tag off">RESOLVED</span>'}</td></tr>`;
-    return pageHead('REPORT', 'LA_OSから届いたエラー報告を確認します。', `<span class="tag off">未解決 ${openCount}</span>`) + `<section class="card">${table(reports, ['日時','送信元','画面','操作','コード','内容','ユーザー','状態','操作'], row, '報告はありません。')}</section>`;
+    const loadError = state.collectionErrors.errorReports ? `<p class="banner">errorReportsの読み込みに失敗しました。権限または接続を確認してください。変更履歴にある報告のみ補助表示しています。</p>` : '';
+    const row = report => `<tr><td>${timestampText(report.createdAt)}</td><td>${escapeHtml(report.source || 'LA_OS')}</td><td>${escapeHtml(report.area || '—')}</td><td>${escapeHtml(report.action || '—')}</td><td>${escapeHtml(report.errorCode || 'unknown')}</td><td>${escapeHtml(report.message || '—')}</td><td>${escapeHtml(report.displayName || report.memberId || '—')}</td><td>${escapeHtml(report.status || 'new')}</td><td>${report.isLogFallback ? '<span class="tag off">LOG</span>' : (report.status !== 'resolved' ? `<button class="secondary" data-report-resolve="${report.id}">解決済みにする</button>` : '<span class="tag off">RESOLVED</span>')}</td></tr>`;
+    return pageHead('REPORT', 'LA_OSから届いたエラー報告を確認します。', `<span class="tag off">未解決 ${openCount}</span>`) + `${loadError}<section class="card">${table(reports, ['日時','送信元','画面','操作','コード','内容','ユーザー','状態','操作'], row, '報告はありません。')}</section>`;
   }
   function onboxPage() {
     const artists = state.data.artists.length ? state.data.artists : [{ id:'', artistKey:'ART-0000', name:'アーティスト未登録' }];
