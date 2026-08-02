@@ -203,6 +203,7 @@
         artist.imageUrl = makeArtistThumbnail(artist.name, hue);
       }
     });
+    event.flyerUrl = event.flyerUrl || makeEventFlyer(event.title, event.venue, event.date);
   });
   state.nextLive.flyerUrl = state.nextLive.flyerUrl || makeEventFlyer(state.nextLive.title, state.nextLive.venue, state.events[0]?.date || "");
   const STORAGE_KEY = "la_os_member_profile_v2";
@@ -262,6 +263,7 @@
     reservationDraft: null,
     reservationIndex: 0,
     pendingCancelIndex: null,
+    settingsDraft: null,
     reservationMode: "create",
     signalIndex: 0,
     danmakuIndex: 0,
@@ -418,13 +420,20 @@
     renderSignalCard();
   }
 
+  function getEventList() {
+    const published = Array.isArray(window.LAOS_PUBLISHED_EVENTS) ? window.LAOS_PUBLISHED_EVENTS : [];
+    return published.length ? published : state.events;
+  }
+
   function getEvent(eventId) {
-    return state.events.find((event) => event.eventId === eventId) ?? state.events[0];
+    const list = getEventList();
+    return list.find((event) => event.eventId === eventId || event.id === eventId) ?? list[0] ?? state.events[0];
   }
 
   function getAct(eventId, actId) {
     const event = getEvent(eventId);
-    return event.acts.find((act) => act.actId === actId) ?? event.acts[0];
+    const acts = Array.isArray(event?.acts) ? event.acts : [];
+    return acts.find((act) => act.actId === actId || act.artistId === actId) ?? acts[0] ?? { actId: "", artistId: "", name: "ARTIST" };
   }
 
   function openDialog(dialog) {
@@ -550,7 +559,7 @@
     if (!reservations.length) {
       bodyNode.hidden = true;
       emptyNode.hidden = false;
-      stateLabel.textContent = "EMPTY";
+      stateLabel.textContent = "0件";
       return;
     }
 
@@ -558,7 +567,7 @@
     emptyNode.hidden = true;
     runtime.reservationIndex = clamp(runtime.reservationIndex, 0, Math.max(0, reservations.length - 1));
     state.reservation = getSelectedReservation();
-    stateLabel.textContent = `${pad2(reservations.length)}莉ｶ`;
+    stateLabel.textContent = `${pad2(reservations.length)}件`;
 
     if (carousel) {
       const fragment = document.createDocumentFragment();
@@ -574,10 +583,10 @@
           <span class="reservation-card-index">${pad2(index + 1)}</span>
           <strong>${event.title}</strong>
           <dl>
-            <div><dt>蜈ｬ貍疲律</dt><dd>${event.date}</dd></div>
-            <div><dt>莨壼ｴ</dt><dd>${event.venue}</dd></div>
-            <div><dt>逶ｮ蠖薙※ARTIST</dt><dd>${act.name}</dd></div>
-            <div><dt>譫壽焚</dt><dd>${reservation.ticketCount}</dd></div>
+            <div><dt>公演日</dt><dd>${event.date}</dd></div>
+            <div><dt>会場</dt><dd>${event.venue}</dd></div>
+            <div><dt>お目当てのアーティスト</dt><dd>${act.name}</dd></div>
+            <div><dt>枚数</dt><dd>${reservation.ticketCount}</dd></div>
           </dl>
         `;
         fragment.append(card);
@@ -721,8 +730,8 @@
       : `<span aria-hidden="true">${label.slice(0, 2).toUpperCase()}</span>`;
   }
 
-  const SIGNAL_DAILY_LIMIT = 1;
-  const SIGNAL_DEMO_UNLIMITED = true;
+  const SIGNAL_DAILY_LIMIT = 3;
+  const SIGNAL_DEMO_UNLIMITED = false;
   const SIGNAL_DAILY_STORAGE_KEY = "la_os_signal_daily_limit_v1";
   const getTokyoDateKey = () =>
     new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
@@ -746,11 +755,11 @@
     const quotaNote = $("#signal-limit-note");
     const submitButton = $("#signal-submit");
 
-    if (quotaStatus) quotaStatus.textContent = SIGNAL_DEMO_UNLIMITED ? "DEMO / ∞" : `${used} / ${SIGNAL_DAILY_LIMIT}`;
+    if (quotaStatus) quotaStatus.textContent = SIGNAL_DEMO_UNLIMITED ? "0 / ∞" : `${used} / ${SIGNAL_DAILY_LIMIT}`;
     if (quotaNote) quotaNote.textContent = SIGNAL_DEMO_UNLIMITED
       ? "デモ期間中は何度でも送信できます。"
       : remaining > 0
-      ? "本日は1回まで送信できます。"
+      ? `本日は${SIGNAL_DAILY_LIMIT}回まで送信できます。`
       : "本日の送信上限に達しています。";
     if (submitButton) submitButton.disabled = !SIGNAL_DEMO_UNLIMITED && remaining <= 0;
   };
@@ -866,6 +875,204 @@
     setText("#settings-member-id", state.user.memberId);
   }
 
+  function getFunctionsApi() {
+    if (typeof firebase === "undefined" || typeof firebase.functions !== "function") return null;
+    try {
+      return firebase.functions();
+    } catch {
+      return null;
+    }
+  }
+
+  function getAuthApi() {
+    if (typeof firebase === "undefined" || typeof firebase.auth !== "function") return null;
+    try {
+      return firebase.auth();
+    } catch {
+      return null;
+    }
+  }
+
+  function getFirestoreApi() {
+    if (typeof firebase === "undefined" || typeof firebase.firestore !== "function") return null;
+    try {
+      return firebase.firestore();
+    } catch {
+      return null;
+    }
+  }
+
+  function toTimestampMs(value) {
+    if (!value) return 0;
+    if (typeof value.toDate === "function") return value.toDate().getTime();
+    if (typeof value.seconds === "number") {
+      return value.seconds * 1000 + Math.floor(Number(value.nanoseconds || 0) / 1e6);
+    }
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function sortReservationRecords(records) {
+    return [...records].sort((a, b) => toTimestampMs(b.updatedAt || b.createdAt) - toTimestampMs(a.updatedAt || a.createdAt));
+  }
+
+  function makeReservationFlyer(event) {
+    return event?.flyerUrl || makeEventFlyer(event?.title || "EVENT", event?.venue || "VENUE", event?.date || "");
+  }
+
+  function normalizeReservationRecord(doc) {
+    const data = typeof doc?.data === "function" ? doc.data() || {} : (doc || {});
+    const event = getEvent(data.eventId);
+    const act = getAct(data.eventId, data.actId);
+    return {
+      reservationId: doc?.id || data.reservationId || makeId("res"),
+      memberUid: String(data.memberUid || ""),
+      memberId: String(data.memberId || ""),
+      memberDisplayName: String(data.memberDisplayName || ""),
+      memberEmail: String(data.memberEmail || ""),
+      eventId: String(data.eventId || event.eventId || ""),
+      eventDate: String(data.eventDate || event.date || ""),
+      eventTitle: String(data.eventTitle || event.title || ""),
+      venue: String(data.venue || event.venue || ""),
+      flyerUrl: String(data.flyerUrl || makeReservationFlyer(event)),
+      actId: String(data.actId || act.actId || ""),
+      actName: String(data.actName || act.name || ""),
+      ticketCount: Math.max(1, Number.parseInt(data.ticketCount, 10) || 1),
+      status: String(data.status || "active"),
+      environment: String(data.environment || "prod"),
+      createdAt: data.createdAt || null,
+      updatedAt: data.updatedAt || null,
+    };
+  }
+
+  function isActiveReservation(reservation) {
+    return String(reservation?.status || "active") !== "canceled";
+  }
+
+  function syncReservationRecords(records = []) {
+    const active = sortReservationRecords(records.filter(isActiveReservation));
+    state.reservations = active;
+    runtime.reservationIndex = clamp(runtime.reservationIndex, 0, Math.max(0, active.length - 1));
+    state.reservation = getSelectedReservation();
+    renderReservationCard();
+  }
+
+  async function loadReservationIdentity(user) {
+    const authProfile = loadProfile() || {};
+    const identity = {
+      memberUid: user?.uid || "",
+      memberId: authProfile.memberId || state.user.memberId,
+      memberDisplayName: authProfile.displayName || state.user.displayName,
+      memberEmail: authProfile.email || state.user.email,
+    };
+    const db = getFirestoreApi();
+    if (!db || !user?.uid) return identity;
+
+    try {
+      const snapshot = await db.collection("members").doc(user.uid).get();
+      if (snapshot.exists) {
+        const data = snapshot.data() || {};
+        identity.memberId = data.memberId || identity.memberId;
+        identity.memberDisplayName = data.displayName || identity.memberDisplayName;
+        identity.memberEmail = data.email || identity.memberEmail;
+      }
+    } catch (error) {
+      console.warn("reservation identity read skipped", error);
+    }
+
+    return identity;
+  }
+
+  let reservationUnsubscribe = null;
+  let reservationAuthWatcherBound = false;
+
+  function startReservationSync() {
+    const auth = getAuthApi();
+    const db = getFirestoreApi();
+    const user = auth?.currentUser;
+
+    if (!auth || !db || !user) return;
+
+    reservationUnsubscribe?.();
+    state.reservations = [];
+    runtime.reservationIndex = 0;
+    state.reservation = null;
+    renderReservationCard();
+    reservationUnsubscribe = db.collection("reservations")
+      .where("memberUid", "==", user.uid)
+      .onSnapshot(
+        (snapshot) => {
+          const records = snapshot.docs.map((doc) => normalizeReservationRecord(doc));
+          syncReservationRecords(records);
+        },
+        (error) => {
+          console.warn("reservation snapshot error", error);
+          setToast("予約データの読み込みに失敗しました。", true);
+        }
+      );
+  }
+
+  function bindReservationAuthSync() {
+    const auth = getAuthApi();
+    if (!auth || reservationAuthWatcherBound) return;
+    reservationAuthWatcherBound = true;
+
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        startReservationSync();
+      } else {
+        reservationUnsubscribe?.();
+        reservationUnsubscribe = null;
+      }
+    });
+
+    if (auth.currentUser) {
+      startReservationSync();
+    }
+  }
+
+  async function commitSettingsDraft() {
+    const draft = runtime.settingsDraft;
+    if (!draft) return;
+
+    const auth = typeof firebase !== "undefined" && typeof firebase.auth === "function" ? firebase.auth() : null;
+    const currentUser = auth?.currentUser || null;
+    const functionsApi = getFunctionsApi();
+
+    try {
+      if (functionsApi) {
+        const callable = functionsApi.httpsCallable("updateMemberProfile");
+        const result = await callable(draft);
+        const payload = result?.data || {};
+        state.user.displayName = payload.displayName || draft.displayName || state.user.displayName;
+        state.user.xAccount = payload.xId || draft.xId || state.user.xAccount;
+        state.user.email = payload.email || draft.email || state.user.email;
+      } else {
+        state.user.displayName = draft.displayName || state.user.displayName;
+        state.user.xAccount = draft.xId || state.user.xAccount;
+        state.user.email = draft.email || state.user.email;
+        if (currentUser && draft.displayName && typeof currentUser.updateProfile === "function") {
+          await currentUser.updateProfile({ displayName: draft.displayName });
+        }
+      }
+
+      writeProfile({
+        displayName: state.user.displayName,
+        xAccount: state.user.xAccount,
+        email: state.user.email,
+      });
+      renderHeader();
+      setToast("登録情報を更新しました。");
+      closeDialog($("#settings-confirm-dialog"));
+      closeDialog($("#settings-dialog"));
+    } catch (error) {
+      setToast("登録情報の変更に失敗しました。", true);
+      console.error("settings update error", error);
+    } finally {
+      runtime.settingsDraft = null;
+    }
+  }
+
   function renderAll() {
     renderHeader();
     renderChamber();
@@ -890,12 +1097,34 @@
     const actSelect = $("#reservation-act-select");
     if (!actSelect) return;
 
+    const acts = Array.isArray(event?.acts) ? event.acts : [];
+    if (!acts.length) {
+      actSelect.replaceChildren(makeOption("", "アーティスト同期待ち"));
+      actSelect.value = "";
+      actSelect.disabled = true;
+      return;
+    }
+
+    actSelect.disabled = false;
     actSelect.replaceChildren(
-      ...event.acts.map((act) => makeOption(act.actId, act.name))
+      ...acts.map((act) => makeOption(act.actId, act.name))
     );
-    actSelect.value = selectedActId && event.acts.some((act) => act.actId === selectedActId)
+    actSelect.value = selectedActId && acts.some((act) => act.actId === selectedActId)
       ? selectedActId
-      : event.acts[0].actId;
+      : acts[0].actId;
+  }
+
+  function updateReservationFlyerPreview(eventId) {
+    const event = getEvent(eventId);
+    const flyer = $("#reservation-flyer-image");
+    const title = $("#reservation-flyer-title");
+    const caption = $("#reservation-flyer-caption");
+    if (flyer) {
+      flyer.src = event.flyerUrl || makeReservationFlyer(event);
+      flyer.alt = `${event.title} フライヤー`;
+    }
+    if (title) title.textContent = event.title;
+    if (caption) caption.textContent = `${event.date} / ${event.venue}`;
   }
 
   function updateReservationSummaryFromForm() {
@@ -916,18 +1145,26 @@
     runtime.reservationDraft = draft;
 
     const current = getSelectedReservation();
-    const eventId = draft?.eventId ?? current?.eventId ?? state.events[0].eventId;
-    const actId = draft?.actId ?? current?.actId ?? getEvent(eventId).acts[0].actId;
+    const events = getEventList();
+    const eventSeed = events[0] ?? state.events[0];
+    const eventId = draft?.eventId ?? current?.eventId ?? eventSeed?.eventId ?? "";
+    const currentEvent = getEvent(eventId);
+    const actSeed = Array.isArray(currentEvent?.acts) ? currentEvent.acts[0] : null;
+    const actId = draft?.actId ?? current?.actId ?? actSeed?.actId ?? "";
     const ticketCount = draft?.ticketCount ?? current?.ticketCount ?? 1;
 
     if (eventSelect) {
       eventSelect.replaceChildren(
-        ...state.events.map((event) => makeOption(event.eventId, `${event.date} / ${event.title}`))
+        ...(events.length
+          ? events.map((event) => makeOption(event.eventId, `${event.date} / ${event.title}`))
+          : [makeOption("", "予約対象イベントを読み込み中")])
       );
       eventSelect.value = eventId;
+      eventSelect.disabled = !events.length;
     }
 
     updateReservationActOptions(eventId, actId);
+    updateReservationFlyerPreview(eventId);
     if (countInput) countInput.value = String(ticketCount);
     updateReservationSummaryFromForm();
     openDialog(dialog);
@@ -940,7 +1177,7 @@
     const reservations = state.reservations ?? [];
     const fragment = document.createDocumentFragment();
 
-    reservations.slice(0, 3).forEach((reservation, index) => {
+    reservations.forEach((reservation, index) => {
       const event = getEvent(reservation.eventId);
       const act = getAct(reservation.eventId, reservation.actId);
       const item = document.createElement("article");
@@ -951,19 +1188,50 @@
           <span>${pad2(index + 1)}</span>
         </div>
         <dl>
-          <div><dt>蜈ｬ貍疲律</dt><dd>${event.date}</dd></div>
-          <div><dt>莨壼ｴ</dt><dd>${event.venue}</dd></div>
-          <div><dt>逶ｮ蠖薙※ARTIST</dt><dd>${act.name}</dd></div>
-          <div><dt>譫壽焚</dt><dd>${reservation.ticketCount}</dd></div>
+          <div><dt>公演日</dt><dd>${event.date}</dd></div>
+          <div><dt>会場</dt><dd>${event.venue}</dd></div>
+          <div><dt>お目当てのアーティスト</dt><dd>${act.name}</dd></div>
+          <div><dt>枚数</dt><dd>${reservation.ticketCount}</dd></div>
         </dl>
         <div class="reservation-detail-actions">
-          <button type="button" class="ghost-button" data-reservation-action="edit" data-reservation-index="${index}">螟画峩縺吶ｋ</button>
-          <button type="button" class="ghost-button" data-reservation-action="cancel" data-reservation-index="${index}">繧ｭ繝｣繝ｳ繧ｻ繝ｫ縺吶ｋ</button>
+          <button type="button" class="ghost-button" data-reservation-action="edit" data-reservation-index="${index}">変更する</button>
+          <button type="button" class="ghost-button" data-reservation-action="cancel" data-reservation-index="${index}">キャンセルする</button>
         </div>
       `;
       fragment.append(item);
     });
     list.replaceChildren(fragment);
+  }
+
+  function syncReservationEventSource() {
+    renderReservationCard();
+
+    const dialog = $("#reservation-form-dialog");
+    const detailDialog = $("#reservation-detail-dialog");
+    if (!dialog?.open && !detailDialog?.open) return;
+
+    const eventSelect = $("#reservation-event-select");
+    if (!eventSelect) return;
+
+    const events = getEventList();
+    const previousEventId = eventSelect.value;
+    const nextEventId = events.some((event) => event.eventId === previousEventId || event.id === previousEventId)
+      ? previousEventId
+      : events[0]?.eventId || "";
+
+    eventSelect.replaceChildren(
+      ...(events.length
+        ? events.map((event) => makeOption(event.eventId, `${event.date} / ${event.title}`))
+        : [makeOption("", "予約対象イベントを読み込み中")])
+    );
+    eventSelect.value = nextEventId;
+    eventSelect.disabled = !events.length;
+
+    if (nextEventId) {
+      updateReservationActOptions(nextEventId, $("#reservation-act-select")?.value || null);
+      updateReservationFlyerPreview(nextEventId);
+      updateReservationSummaryFromForm();
+    }
   }
 
   function openReservationDetailDialog() {
@@ -977,12 +1245,75 @@
     openDialog($("#reservation-cancel-dialog"));
   }
 
-  function commitReservationDraft(draft) {
+  async function commitReservationDraft(draft) {
+    const event = getEvent(draft.eventId);
+    const act = getAct(draft.eventId, draft.actId);
+    const auth = getAuthApi();
+    const user = auth?.currentUser || null;
+    const db = getFirestoreApi();
+
+    if (db && user) {
+      try {
+        const identity = await loadReservationIdentity(user);
+        const payload = {
+          memberUid: user.uid,
+          memberId: identity.memberId,
+          memberDisplayName: identity.memberDisplayName,
+          memberEmail: identity.memberEmail,
+          eventId: event.eventId,
+          eventDate: event.date,
+          eventTitle: event.title,
+          venue: event.venue,
+          flyerUrl: event.flyerUrl || makeReservationFlyer(event),
+          actId: act.actId,
+          actName: act.name,
+          ticketCount: draft.ticketCount,
+          status: "active",
+          environment: "prod",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+
+        let reservationId = draft.reservationId || "";
+        if (draft.reservationId) {
+          await db.collection("reservations").doc(draft.reservationId).set({
+            ...payload,
+            createdAt: draft.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          reservationId = draft.reservationId;
+        } else {
+          const createdRef = await db.collection("reservations").add({
+            ...payload,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          reservationId = createdRef.id;
+        }
+
+        syncReservationRecords([
+          {
+            reservationId,
+            ...payload,
+            status: "active",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          },
+          ...state.reservations.filter((item) => item.reservationId !== reservationId),
+        ]);
+        runtime.reservationDraft = null;
+        setToast("予約を送信しました。");
+        return;
+      } catch (error) {
+        console.error("reservation save error", error);
+        setToast("予約の保存に失敗しました。", true);
+        throw error;
+      }
+    }
+
     const next = {
       reservationId: draft.reservationId ?? makeId("res"),
       eventId: draft.eventId,
       actId: draft.actId,
       ticketCount: draft.ticketCount,
+      status: "active",
     };
 
     if (typeof draft.reservationIndex === "number" && state.reservations[draft.reservationIndex]) {
@@ -1193,6 +1524,8 @@
 
     $("#open-settings")?.addEventListener("click", openSettingsDialog);
     $("#settings-close")?.addEventListener("click", () => closeDialog($("#settings-dialog")));
+    $("#settings-confirm-back")?.addEventListener("click", () => closeDialog($("#settings-confirm-dialog")));
+    $("#settings-confirm-yes")?.addEventListener("click", commitSettingsDraft);
     $("#system-update-trigger")?.addEventListener("click", startSystemUpdateSequence);
     $("#close-update-dialog")?.addEventListener("click", () => closeDialog($("#system-update-dialog")));
 
@@ -1218,28 +1551,54 @@
     });
 
     $("#reservation-cancel-back")?.addEventListener("click", () => closeDialog($("#reservation-cancel-dialog")));
-    $("#reservation-cancel-confirm")?.addEventListener("click", () => {
+    $("#reservation-cancel-confirm")?.addEventListener("click", async () => {
       const index = clamp(runtime.pendingCancelIndex ?? runtime.reservationIndex, 0, Math.max(0, state.reservations.length - 1));
-      if (state.reservations[index]) {
-        state.reservations.splice(index, 1);
+      const reservation = state.reservations[index];
+      if (!reservation) {
+        closeDialog($("#reservation-cancel-dialog"));
+        return;
       }
-      runtime.pendingCancelIndex = null;
-      runtime.reservationIndex = clamp(index - 1, 0, Math.max(0, state.reservations.length - 1));
-      state.reservation = getSelectedReservation();
-      closeDialog($("#reservation-cancel-dialog"));
-      renderReservationCard();
-      setToast("予約をキャンセルしました。");
+
+      const db = getFirestoreApi();
+      const auth = getAuthApi();
+      const user = auth?.currentUser || null;
+
+      try {
+        if (db && user && reservation.reservationId) {
+          await db.collection("reservations").doc(reservation.reservationId).set({
+            status: "canceled",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          syncReservationRecords(state.reservations.filter((item) => item.reservationId !== reservation.reservationId));
+        } else {
+          state.reservations.splice(index, 1);
+          renderReservationCard();
+        }
+        setToast("予約をキャンセルしました。");
+      } catch (error) {
+        console.error("reservation cancel error", error);
+        setToast("予約のキャンセルに失敗しました。", true);
+      } finally {
+        runtime.pendingCancelIndex = null;
+        runtime.reservationIndex = clamp(index - 1, 0, Math.max(0, state.reservations.length - 1));
+        state.reservation = getSelectedReservation();
+        closeDialog($("#reservation-cancel-dialog"));
+      }
     });
     $("#reservation-overwrite-back")?.addEventListener("click", () => closeDialog($("#reservation-overwrite-dialog")));
-    $("#reservation-overwrite-confirm")?.addEventListener("click", () => {
-      if (runtime.reservationDraft) commitReservationDraft(runtime.reservationDraft);
-      closeDialog($("#reservation-overwrite-dialog"));
-      closeDialog($("#reservation-form-dialog"));
-      renderReservationCard();
+    $("#reservation-overwrite-confirm")?.addEventListener("click", async () => {
+      try {
+        if (runtime.reservationDraft) await commitReservationDraft(runtime.reservationDraft);
+        closeDialog($("#reservation-overwrite-dialog"));
+        closeDialog($("#reservation-form-dialog"));
+        renderReservationCard();
+      } catch {
+        // commitReservationDraft already reports the error
+      }
     });
 
     $("#reservation-form-close")?.addEventListener("click", () => closeDialog($("#reservation-form-dialog")));
-    $("#reservation-form")?.addEventListener("submit", (event) => {
+    $("#reservation-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
 
       const eventSelect = $("#reservation-event-select");
@@ -1262,14 +1621,19 @@
         return;
       }
 
-      commitReservationDraft(draft);
-      closeDialog($("#reservation-form-dialog"));
+      try {
+        await commitReservationDraft(draft);
+        closeDialog($("#reservation-form-dialog"));
+      } catch {
+        // commitReservationDraft already reports the error
+      }
     });
 
     $("#reservation-event-select")?.addEventListener("change", () => {
       const eventSelect = $("#reservation-event-select");
       if (!eventSelect) return;
       updateReservationActOptions(eventSelect.value);
+      updateReservationFlyerPreview(eventSelect.value);
       updateReservationSummaryFromForm();
     });
     $("#reservation-act-select")?.addEventListener("change", updateReservationSummaryFromForm);
@@ -1346,6 +1710,9 @@
         openSignalDialog();
       }
     });
+    window.addEventListener("laos-published-events-updated", () => {
+      syncReservationEventSource();
+    });
 
     $("#danmaku-close")?.addEventListener("click", () => closeDialog($("#danmaku-dialog")));
     $("#danmaku-dialog")?.addEventListener("change", (event) => {
@@ -1421,18 +1788,13 @@
 
     $("#settings-form")?.addEventListener("submit", (event) => {
       event.preventDefault();
-      state.user.displayName = $("#settings-display-name").value.trim() || state.user.displayName;
-      state.user.xAccount = $("#settings-x-account").value.trim();
-      state.user.email = $("#settings-email").value.trim();
-      state.user.password = $("#settings-password").value;
-      writeProfile({
-        displayName: state.user.displayName,
-        email: state.user.email,
-        xAccount: state.user.xAccount,
-      });
-      renderHeader();
-      closeDialog($("#settings-dialog"));
-      setToast("保存しました。");
+      runtime.settingsDraft = {
+        displayName: $("#settings-display-name").value.trim() || state.user.displayName,
+        xId: $("#settings-x-account").value.trim(),
+        email: $("#settings-email").value.trim(),
+        password: $("#settings-password").value,
+      };
+      openDialog($("#settings-confirm-dialog"));
     });
 
     $("#reservation-form-dialog")?.addEventListener("close", () => {
@@ -1452,6 +1814,11 @@
     $("#settings-dialog")?.addEventListener("close", () => {
       const password = $("#settings-password");
       if (password) password.value = "";
+      runtime.settingsDraft = null;
+    });
+
+    $("#settings-confirm-dialog")?.addEventListener("close", () => {
+      runtime.settingsDraft = null;
     });
 
     $("#bottom-nav")?.addEventListener("click", (event) => {
@@ -1525,6 +1892,7 @@
     attachEvents();
     initializeDialogs();
     wireFormCounters();
+    bindReservationAuthSync();
     updateSignalCounter();
     updateDanmakuCounter();
   }

@@ -11,8 +11,8 @@
   })[char]);
 
   const SIGNAL_DAILY_STORAGE_KEY = "la_os_signal_daily_limit_v1";
-  const SIGNAL_DAILY_LIMIT = 1;
-  const SIGNAL_DEMO_UNLIMITED = true;
+  const SIGNAL_DAILY_LIMIT = 3;
+  const SIGNAL_DEMO_UNLIMITED = false;
   const SIGNAL_EMOTIONS = [
     { value: "song", label: "歌が良い" },
     { value: "stage", label: "ステージが良い" },
@@ -20,6 +20,7 @@
   ];
 
   let publishedArtists = [];
+  let publishedEvents = [];
   let systemSettings = { signalEnabled: true, systemEnabled: true };
   let currentUser = null;
   let currentMember = null;
@@ -30,6 +31,30 @@
 
   function getFunctionsApi() {
     return typeof firebase.functions === "function" ? firebase.functions() : null;
+  }
+
+  function initAppCheck() {
+    const siteKey = String(
+      window.FIREBASE_APPCHECK_SITE_KEY
+      || window.FIREBASE_CONFIG?.appCheckSiteKey
+      || ""
+    ).trim();
+
+    if (!siteKey || typeof firebase === "undefined" || typeof firebase.appCheck !== "function") {
+      return false;
+    }
+
+    try {
+      const instance = firebase.appCheck();
+      if (instance?.activate && !window.__LAOS_APPCHECK_ACTIVE__) {
+        instance.activate(siteKey, true);
+        window.__LAOS_APPCHECK_ACTIVE__ = true;
+      }
+      return true;
+    } catch (error) {
+      console.warn("App Check init skipped", error);
+      return false;
+    }
   }
 
   function tokyoDateKey() {
@@ -62,12 +87,12 @@
     const quotaNote = $("#signal-limit-note");
     const submitButton = $("#signal-submit");
 
-    if (quotaStatus) quotaStatus.textContent = SIGNAL_DEMO_UNLIMITED ? "DEMO / ∞" : `${used} / ${SIGNAL_DAILY_LIMIT}`;
+    if (quotaStatus) quotaStatus.textContent = SIGNAL_DEMO_UNLIMITED ? "0 / ∞" : `${used} / ${SIGNAL_DAILY_LIMIT}`;
     if (quotaNote) {
       quotaNote.textContent = SIGNAL_DEMO_UNLIMITED
         ? "デモ期間中は何度でも送信できます。"
         : remaining > 0
-        ? "本日は1回まで送信できます。"
+        ? `本日は${SIGNAL_DAILY_LIMIT}回まで送信できます。`
         : "本日の送信上限に達しています。";
     }
     if (submitButton) submitButton.disabled = !SIGNAL_DEMO_UNLIMITED && remaining <= 0;
@@ -210,7 +235,9 @@
   function refreshSignalForm() {
     const artistSelect = $("#signal-artist-select");
     const emotionSelect = $("#signal-emotion-select");
-    window.LAOS_SIGNAL_ARTISTS = publishedArtists.map((artist) => ({
+    const fallbackArtists = Array.isArray(window.LAOS_PUBLISHED_ARTISTS) ? window.LAOS_PUBLISHED_ARTISTS : [];
+    const sourceArtists = publishedArtists.length ? publishedArtists : fallbackArtists;
+    window.LAOS_SIGNAL_ARTISTS = sourceArtists.map((artist) => ({
       id: artist.id,
       name: artist.name || "ARTIST",
       imageUrl: artist.imageUrl || artist.thumbnailUrl || "",
@@ -219,10 +246,10 @@
     }));
     if (artistSelect) {
       const previous = artistSelect.value;
-      artistSelect.innerHTML = publishedArtists.length
-        ? publishedArtists.map((artist) => `<option value="${escape(artist.id)}">${escape(artist.name)}</option>`).join("")
+      artistSelect.innerHTML = sourceArtists.length
+        ? sourceArtists.map((artist) => `<option value="${escape(artist.id)}">${escape(artist.name)}</option>`).join("")
         : '<option value="">公開中のアーティストがありません</option>';
-      if (publishedArtists.some((artist) => artist.id === previous)) {
+      if (sourceArtists.some((artist) => artist.id === previous)) {
         artistSelect.value = previous;
       }
     }
@@ -242,6 +269,52 @@
     syncSignalQuota();
     window.dispatchEvent(new CustomEvent("laos-signal-artists-updated", {
       detail: window.LAOS_SIGNAL_ARTISTS,
+    }));
+  }
+
+  function rebuildPublishedEvents() {
+    const artistMap = new Map(
+      publishedArtists.map((artist) => [String(artist.id || ""), artist])
+    );
+    const events = publishedEvents
+      .map((event) => {
+        const eventId = String(event.id || event.eventId || "").trim();
+        const artistIds = Array.isArray(event.artistIds)
+          ? event.artistIds.map((artistId) => String(artistId || "").trim()).filter(Boolean)
+          : [];
+        const acts = artistIds.map((artistId, index) => {
+          const artist = artistMap.get(artistId);
+          return {
+            actId: artist?.id || artistId || `act-${index + 1}`,
+            artistId: artist?.id || artistId || "",
+            name: artist?.name || artistId || "ARTIST",
+            imageUrl: artist?.imageUrl || artist?.thumbnailUrl || "",
+          };
+        });
+
+        return {
+          eventId,
+          title: String(event.title || "EVENT"),
+          date: String(event.eventDate || event.date || ""),
+          venue: String(event.venue || ""),
+          flyerUrl: String(event.flyerUrl || event.imageUrl || ""),
+          artistIds,
+          acts: acts.length ? acts : artistIds.map((artistId, index) => ({
+            actId: artistId || `act-${index + 1}`,
+            artistId,
+            name: artistId || "ARTIST",
+            imageUrl: "",
+          })),
+          status: String(event.status || ""),
+          lpVisible: event.lpVisible !== false,
+          environment: String(event.environment || "dev"),
+        };
+      })
+      .filter((event) => event.eventId && event.title && event.date && event.venue);
+
+    window.LAOS_PUBLISHED_EVENTS = events;
+    window.dispatchEvent(new CustomEvent("laos-published-events-updated", {
+      detail: events,
     }));
   }
 
@@ -473,11 +546,34 @@
             imageUrl: doc.data().thumbnailUrl || doc.data().imageUrl || "",
           }));
           refreshSignalForm();
+          rebuildPublishedEvents();
         },
         (error) => {
           const issue = buildBackendIssue(error, "artists", "アーティスト一覧の読み込み");
           toast(issue.message, issue);
           console.error("artist snapshot error", error);
+        }
+      );
+  }
+
+  function watchPublishedEvents(db) {
+    db.collection("events")
+      .where("lpVisible", "==", true)
+      .where("environment", "==", "prod")
+      .onSnapshot(
+        (snapshot) => {
+          publishedEvents = snapshot.docs
+            .map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }))
+            .filter((event) => event.status !== "archived");
+          rebuildPublishedEvents();
+        },
+        (error) => {
+          const issue = buildBackendIssue(error, "events", "イベント一覧の読み込み");
+          toast(issue.message, issue);
+          console.error("event snapshot error", error);
         }
       );
   }
@@ -536,15 +632,28 @@
   // フォームは先に登録し、ログイン情報の到着を待つ間も無反応にしない。
   bindSignalForm();
   bindSignalOpenPreview();
+  refreshSignalForm();
+  initAppCheck();
+
+  if (firebase.apps.length && typeof firebase.firestore === "function") {
+    const db = firebase.firestore();
+    watchSystemSettings(db);
+    watchPublishedArtists(db);
+    watchPublishedEvents(db);
+  }
 
   firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) return;
+    if (!user) {
+      currentUser = null;
+      currentMember = null;
+      syncSignalQuota();
+      refreshSignalForm();
+      return;
+    }
     if (!firebase.apps.length) return;
 
     const db = firebase.firestore();
     await loadCurrentMember(user);
-    watchSystemSettings(db);
-    watchPublishedArtists(db);
     watchMemberSignals(db, user);
     bindDanmakuForm();
     refreshSignalForm();
