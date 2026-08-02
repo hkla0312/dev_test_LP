@@ -113,7 +113,7 @@
     return pageHead('MEMBER', 'メンバー情報はFirebase Authenticationと連携しています。') + `<section class="card">${table(state.data.members, ['MEMBER ID','表示名','VERSION','メール','認証','PROGRESS','ライセンス','状態','操作'], row)}</section>${current}`;
   }
   function reportPage() {
-    const catalogRows = ERROR_TYPE_CATALOG.map(([code, category, type, action]) => `<details class="error-type-item"><summary><code>${escapeHtml(code)}</code><strong>${escapeHtml(type)}</strong><span>${escapeHtml(category)}</span></summary><div class="error-type-detail"><b>案内内容</b><p>${escapeHtml(action)}</p></div></details>`).join('');
+    const catalogRows = ERROR_TYPE_CATALOG.map(([code, category, type, action]) => `<tr><td><code>${escapeHtml(code)}</code></td><td>${escapeHtml(category)}</td><td>${escapeHtml(type)}</td><td>${escapeHtml(action)}</td></tr>`).join('');
     const directReports = [...state.data.errorReports];
     const reportIds = new Set(directReports.map(report => report.id));
     const logFallbacks = state.data.adminLogs.filter(log => log.actionType === 'ERROR_REPORT_CREATE' && !reportIds.has(log.targetId)).map(log => ({ id:`log-${log.id}`, createdAt:log.createdAt, source:'SYSTEM LOG', area:'—', action:log.detail || 'エラー報告', errorCode:log.targetLabel || 'ERROR_REPORT_CREATE', message:'errorReportsの詳細を取得できないため、変更履歴から表示しています。', displayName:log.adminDisplayName || 'SYSTEM', status:'log-only', isLogFallback:true }));
@@ -121,7 +121,7 @@
     const openCount = reports.filter(report => report.status !== 'resolved').length;
     const loadError = state.collectionErrors.errorReports ? `<p class="banner">errorReportsの読み込みに失敗しました。権限または接続を確認してください。変更履歴にある報告のみ補助表示しています。</p>` : '';
     const row = report => `<tr><td>${timestampText(report.createdAt)}</td><td>${escapeHtml(report.source || 'LA_OS')}</td><td>${escapeHtml(report.area || '—')}</td><td>${escapeHtml(report.action || '—')}</td><td>${escapeHtml(report.errorCode || 'unknown')}</td><td>${escapeHtml(report.message || '—')}</td><td>${escapeHtml(report.displayName || report.memberId || '—')}</td><td>${escapeHtml(report.status || 'new')}</td><td>${report.isLogFallback ? '<span class="tag off">LOG</span>' : (report.status !== 'resolved' ? `<button class="secondary" data-report-resolve="${report.id}">解決済みにする</button>` : '<span class="tag off">RESOLVED</span>')}</td></tr>`;
-    return pageHead('REPORT', 'LA_OSから届いたエラー報告と、発生しうるエラー種別を確認します。', `<span class="tag off">未解決 ${openCount}</span>`) + `<section class="card"><h2>エラー種別一覧</h2><p class="sub">コードまたは種類をクリックすると、利用者への案内内容を確認できます。</p><div class="error-type-list">${catalogRows}</div></section>${loadError}<section class="card"><h2>受信済み報告</h2>${table(reports, ['日時','送信元','画面','操作','コード','内容','ユーザー','状態','操作'], row, '報告はありません。')}</section>`;
+    return pageHead('REPORT', 'LA_OSから届いたエラー報告と、発生しうるエラー種別を確認します。', `<span class="tag off">未解決 ${openCount}</span>`) + `<section class="card"><details class="error-type-catalog"><summary><span>LA_OS エラー種別一覧</span><small>${ERROR_TYPE_CATALOG.length} 種</small></summary><div class="error-type-catalog-body"><p class="sub">展開すると、エラーコード・分類・案内内容を確認できます。</p><div class="table-wrap"><table><thead><tr><th>コード</th><th>分類</th><th>種類</th><th>案内内容</th></tr></thead><tbody>${catalogRows}</tbody></table></div></div></details></section>${loadError}<section class="card"><h2>受信済み報告</h2>${table(reports, ['日時','送信元','画面','操作','コード','内容','ユーザー','状態','操作'], row, '報告はありません。')}</section>`;
   }
   function onboxPage() {
     const artists = state.data.artists.length ? state.data.artists : [{ id:'', artistKey:'ART-0000', name:'アーティスト未登録' }];
