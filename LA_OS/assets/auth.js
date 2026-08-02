@@ -719,6 +719,17 @@
     throw error;
   };
 
+  const buildLoginFallbackProfile = (user, fallbackProfile = {}) => createProfilePayload(user, {
+    displayName: fallbackProfile.displayName || user?.displayName || '',
+    email: fallbackProfile.email || user?.email || '',
+    memberId: fallbackProfile.memberId || memberId(),
+    version: fallbackProfile.version || 'v0.01',
+    archiveAccess: fallbackProfile.archiveAccess ?? true,
+    currentProgress: fallbackProfile.currentProgress ?? 38,
+    requiredProgress: fallbackProfile.requiredProgress ?? 100,
+    versionUpPending: fallbackProfile.versionUpPending ?? true,
+  });
+
   const isEmailActuallyInUse = async (email) => {
     if (!authInstance || typeof authInstance.fetchSignInMethodsForEmail !== 'function') {
       return null;
@@ -921,18 +932,37 @@
     try {
       const credential = await authInstance.signInWithEmailAndPassword(email, password);
       await primeAuthToken(credential.user);
+      const storedProfile = loadProfile() || {};
+      const fallbackProfile = buildLoginFallbackProfile(credential.user, {
+        displayName: storedProfile.displayName || credential.user.displayName || '',
+        email: storedProfile.email || email,
+        memberId: storedProfile.memberId || '',
+        version: storedProfile.version || 'v0.01',
+        archiveAccess: storedProfile.archiveAccess ?? true,
+        currentProgress: storedProfile.currentProgress ?? 38,
+        requiredProgress: storedProfile.requiredProgress ?? 100,
+        versionUpPending: storedProfile.versionUpPending ?? true,
+      });
+
+      let profile = null;
+
       try {
-        const profile = await waitForMemberRecord(credential.user, loadProfile() || {});
-        persistSession(profile, password);
-        redirectToMember();
-      } catch (profileError) {
-        try {
-          await authInstance.signOut();
-        } catch {
-          // ignore
-        }
-        showAuthIssue(profileError, 'ログイン');
+        profile = await bootstrapMemberProfile(credential.user, fallbackProfile);
+      } catch (bootstrapError) {
+        console.warn('member bootstrap on login skipped', bootstrapError);
       }
+
+      if (!profile) {
+        try {
+          profile = await waitForMemberRecord(credential.user, fallbackProfile, 15000);
+        } catch (recordError) {
+          console.warn('member record on login not ready', recordError);
+          profile = fallbackProfile;
+        }
+      }
+
+      persistSession(profile, password);
+      redirectToMember();
     } catch (error) {
       showAuthIssue(error, 'ログイン');
     }
