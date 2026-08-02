@@ -6,6 +6,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[character]));
   const timestampText = value => value && value.toDate ? value.toDate().toLocaleString('ja-JP') : (value || '—');
+  const timestampValue = value => value && value.toDate ? value.toDate().getTime() : (Number.isFinite(Date.parse(value)) ? Date.parse(value) : 0);
   const serverTime = () => firebase.firestore.FieldValue.serverTimestamp();
   const ADMIN_LOGIN_URL = localStorage.getItem('la-admin-login-url') || 'login/index.html';
   const ARTIST_THEME_COLOR_ENDPOINT = 'https://us-central1-laconsole-12985.cloudfunctions.net/generateArtistThemeColors';
@@ -15,7 +16,7 @@
     db: null, storage: null, user: null, view: 'events', busy: false,
     environment: localStorage.getItem('la-admin-environment') || 'dev',
     selectedMember: null, selectedArtist: null, showDeletedSignals: false,
-    data: { events: [], artists: [], members: [], artistSignals: [], errorReports: [], adminLogs: [] },
+    data: { events: [], artists: [], members: [], reservations: [], artistSignals: [], errorReports: [], adminLogs: [] },
     settings: { signalEnabled: true, systemEnabled: true }, unsubscribers: [], collectionErrors: {}
   };
   const ACTIONS = ['EVENT_CREATE','EVENT_UPDATE','EVENT_ARCHIVE','EVENT_RESTORE','EVENT_DELETE','ARTIST_CREATE','ARTIST_UPDATE','ARTIST_DELETE','ARTIST_THEME_COLOR_GENERATE','MEMBER_DELETE','PROGRESS_ADD','LICENSE_CHANGE','SIGNAL_DELETE','SIGNAL_RESTORE','ERROR_REPORT_RESOLVE'];
@@ -33,7 +34,7 @@
     ['LAOS-SRV-003','サーバー','内部エラー / タイムアウト','エラーコードを添えて運営へ報告してください。'],
     ['LAOS-UNK-001','サーバー','未分類エラー','エラーコードを添えて運営へ報告してください。']
   ];
-  state.filters = { eventSearch:'', eventStatus:'all', artistSearch:'', artistRole:'all', memberSearch:'', memberStatus:'active' };
+  state.filters = { eventSearch:'', eventStatus:'all', artistSearch:'', artistRole:'all', memberSearch:'', memberStatus:'active', reservationDate:'all' };
 
   function toast(message, isError = false) {
     const node = document.createElement('div'); node.className = 'toast'; node.textContent = message;
@@ -112,6 +113,17 @@
     const current = state.selectedMember ? `<section class="card"><h2>選択中：${escapeHtml(state.selectedMember.displayName)}</h2><p>${escapeHtml(state.selectedMember.memberId)} / ${level(state.selectedMember.progress).label} / ${Number(state.selectedMember.progress || 0)} pt</p><label class="field">ライセンス<select id="licenseSelect">${['NONE','STANDARD','PREMIUM'].map(value => `<option ${state.selectedMember.licenseType === value ? 'selected' : ''}>${value}</option>`).join('')}</select></label><button class="primary" data-action="license-save">ライセンスを変更</button></section>` : '';
     return pageHead('MEMBER', 'メンバー情報はFirebase Authenticationと連携しています。') + `<section class="card">${table(state.data.members, ['MEMBER ID','表示名','VERSION','メール','認証','PROGRESS','ライセンス','状態','操作'], row)}</section>${current}`;
   }
+  function reservationPage() {
+    const filter = state.filters;
+    const reservations = [...state.data.reservations]
+      .filter(reservation => filter.reservationDate === 'all' || reservation.eventDate === filter.reservationDate)
+      .sort((a, b) => String(a.eventDate || '9999-12-31').localeCompare(String(b.eventDate || '9999-12-31')) || timestampValue(b.updatedAt || b.createdAt) - timestampValue(a.updatedAt || a.createdAt));
+    const dates = [...new Set(state.data.reservations.map(reservation => reservation.eventDate).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
+    const statusLabel = status => ({ active: '予約中', canceled: 'キャンセル済み', cancelled: 'キャンセル済み' }[status] || String(status || '-'));
+    const row = reservation => `<tr><td>${escapeHtml(reservation.eventDate || '-')}</td><td>${escapeHtml(reservation.eventTitle || '-')}</td><td>${escapeHtml(reservation.memberDisplayName || reservation.displayName || '-')}<br><small>${escapeHtml(reservation.memberId || reservation.memberUid || '')}</small></td><td>${escapeHtml(reservation.actName || reservation.artistName || '-')}</td><td>${Number(reservation.ticketCount || 0)}</td><td>${escapeHtml(statusLabel(reservation.status))}</td><td>${timestampText(reservation.updatedAt || reservation.createdAt)}</td></tr>`;
+    const filterBar = `<div class="list-filter"><select id="reservationDate"><option value="all">すべての公演日</option>${dates.map(date => `<option value="${escapeHtml(date)}" ${filter.reservationDate === date ? 'selected' : ''}>${escapeHtml(date)}</option>`).join('')}</select><span class="filter-count">${reservations.length}件</span></div>`;
+    return pageHead('RESERVATION', '予約一覧を公演日で確認できます。') + `<section class="card">${filterBar}${table(reservations, ['公演日','イベント','ユーザー名','お目当てのアーティスト','枚数','状態','更新日'], row, '予約はまだありません。')}</section>`;
+  }
   function reportPage() {
     const catalogRows = ERROR_TYPE_CATALOG.map(([code, category, type, action]) => `<tr><td><code>${escapeHtml(code)}</code></td><td>${escapeHtml(category)}</td><td>${escapeHtml(type)}</td><td>${escapeHtml(action)}</td></tr>`).join('');
     const directReports = [...state.data.errorReports];
@@ -177,7 +189,7 @@
   }
   function render() {
     if (!state.user || !state.view) return;
-    const pages = { events: eventPage, artists: artistPage, members: memberPage, progress: progressPage, signals: signalPage, onbox: onboxPage, reports: reportPage, logs: logPage };
+    const pages = { events: eventPage, reservations: reservationPage, artists: artistPage, members: memberPage, progress: progressPage, signals: signalPage, onbox: onboxPage, reports: reportPage, logs: logPage };
     $$('.nav-item[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === state.view));
     $('#content').innerHTML = pages[state.view](); bindPage();
   }
@@ -306,7 +318,7 @@
     $$('[data-onbox-remove]').forEach(button => button.onclick = () => { const slots = $$('.onbox-slot'); if (slots.length > 1) button.closest('.onbox-slot').remove(); else toast('タイムテーブルには1枠以上必要です。', true); });
     $$('[data-onbox-action], [data-onbox-comment]').forEach(button => button.onclick = () => toast('ONBOXの実行処理は、配信基盤接続時に有効化します。'));
     ['logAction','logSearch','logFrom','logTo'].forEach(id => { const node = $(`#${id}`); if (node) node.oninput = filterLogs; });
-    [['eventSearch','eventSearch'],['eventStatus','eventStatus'],['artistSearch','artistSearch'],['artistRole','artistRole'],['memberSearch','memberSearch'],['memberStatus','memberStatus']].forEach(([id, key]) => {
+    [['eventSearch','eventSearch'],['eventStatus','eventStatus'],['reservationDate','reservationDate'],['artistSearch','artistSearch'],['artistRole','artistRole'],['memberSearch','memberSearch'],['memberStatus','memberStatus']].forEach(([id, key]) => {
       const node = $(`#${id}`); if (!node) return;
       const apply = () => { state.filters[key] = node.value; render(); };
       node.onchange = apply;
@@ -334,7 +346,7 @@
     if (!await isAdmin(user)) { await firebase.auth().signOut(); redirectToLogin('role'); return; }
     $('#adminName').textContent = user.displayName || user.email || 'ADMIN'; $('#loginView').hidden = true; $('#appView').hidden = false;
     $('#environmentToggle').value = state.environment;
-    collectionSnapshot('events'); collectionSnapshot('artists'); collectionSnapshot('members'); collectionSnapshot('artistSignals'); collectionSnapshot('errorReports'); collectionSnapshot('adminLogs');
+    collectionSnapshot('events'); collectionSnapshot('artists'); collectionSnapshot('members'); collectionSnapshot('reservations'); collectionSnapshot('artistSignals'); collectionSnapshot('errorReports'); collectionSnapshot('adminLogs');
     state.unsubscribers.push(state.db.collection('settings').doc('system').onSnapshot(snapshot => { state.settings = { ...state.settings, ...(snapshot.exists ? snapshot.data() : {}) }; const status = $('#systemStatus'); status.textContent = state.settings.systemEnabled === false ? 'SYSTEM: STOP' : 'SYSTEM: ON'; status.classList.toggle('off', state.settings.systemEnabled === false); }));
     render();
     refreshSessionTimeout();

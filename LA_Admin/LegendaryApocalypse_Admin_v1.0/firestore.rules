@@ -27,8 +27,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     match /memberIds/{memberId} {
-      allow create: if isAdmin() || (request.auth != null && request.resource.data.uid == request.auth.uid);
-      allow read, update, delete: if isAdmin();
+      allow create, read, update, delete: if isAdmin();
     }
     match /events/{eventId} {
       allow read: if isAdmin() || (resource.data.lpVisible == true && resource.data.status == 'active' && resource.data.environment == 'prod');
@@ -37,6 +36,39 @@ service cloud.firestore {
     match /artists/{artistId} {
       allow read: if isAdmin() || (resource.data.lpVisible == true && resource.data.environment == 'prod');
       allow write: if isAdmin();
+    }
+    match /reservations/{reservationId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.memberUid == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['memberUid', 'memberId', 'memberDisplayName', 'memberEmail', 'eventId', 'eventDate', 'eventTitle', 'venue', 'flyerUrl', 'actId', 'actName', 'ticketCount', 'status', 'environment', 'createdAt', 'updatedAt'])
+        && request.resource.data.memberUid == request.auth.uid
+        && request.resource.data.memberId is string
+        && request.resource.data.memberDisplayName is string
+        && request.resource.data.memberEmail is string
+        && request.resource.data.eventId is string
+        && request.resource.data.eventDate is string
+        && request.resource.data.eventTitle is string
+        && request.resource.data.venue is string
+        && request.resource.data.flyerUrl is string
+        && request.resource.data.actId is string
+        && request.resource.data.actName is string
+        && request.resource.data.ticketCount is int
+        && request.resource.data.ticketCount >= 1
+        && request.resource.data.status == 'active'
+        && request.resource.data.environment == 'prod';
+      allow update: if isAdmin() || (
+        request.auth != null
+        && resource.data.memberUid == request.auth.uid
+        && request.resource.data.memberUid == resource.data.memberUid
+        && request.resource.data.memberId == resource.data.memberId
+        && request.resource.data.memberDisplayName == resource.data.memberDisplayName
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['eventId', 'eventDate', 'eventTitle', 'venue', 'flyerUrl', 'actId', 'actName', 'ticketCount', 'status', 'updatedAt'])
+        && request.resource.data.ticketCount is int
+        && request.resource.data.ticketCount >= 1
+        && request.resource.data.status in ['active', 'canceled']
+      );
+      // Reservation records remain as operating history; cancellation uses status.
+      allow delete: if false;
     }
     match /artistSignals/{signalId} {
       allow create: if request.auth != null && systemAllowsSignals() && request.resource.data.memberUid == request.auth.uid && request.resource.data.signalType in ['song', 'stage', 'character', 'other'] && request.resource.data.isDeleted == false && request.resource.data.environment == get(/databases/$(database)/documents/members/$(request.auth.uid)).data.environment;
