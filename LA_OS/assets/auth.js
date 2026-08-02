@@ -819,7 +819,17 @@
   const redirectToLogin = () => window.location.replace(LOGIN_URL);
   const redirectToMember = () => window.location.replace(MEMBER_URL);
 
+  const prepareRegisterSuccessDialog = () => {
+    hideRegisterSuccessDialog();
+    try {
+      sessionStorage.removeItem('la_os_register_success_pending');
+    } catch {
+      // ignore
+    }
+  };
+
   const syncLoginPage = async () => {
+    prepareRegisterSuccessDialog();
     const stored = loadProfile();
 
     if (stored && !isSessionActive(stored)) {
@@ -1172,6 +1182,7 @@
   async function bootstrap() {
     authInstance = initFirebase();
     setDebugFlag('data-laos-auth-mode', authInstance ? 'firebase' : 'unavailable');
+    hideRegisterSuccessDialog();
 
     if (authInstance?.setPersistence && typeof firebase !== 'undefined' && firebase.auth?.Auth) {
       authInstance.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
@@ -1235,6 +1246,12 @@
 
     initAppCheck();
     playAuthLoaderSequence();
+
+    window.addEventListener('pageshow', () => {
+      if (isLoginPage) {
+        prepareRegisterSuccessDialog();
+      }
+    });
   }
 
   bootstrap();
