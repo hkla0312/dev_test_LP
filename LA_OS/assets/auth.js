@@ -117,6 +117,11 @@
       && /[a-z]/.test(password);
   };
 
+  const normalizeAuthPassword = (value) => {
+    const password = String(value || '').trim();
+    return password.length === 5 ? `${password}0` : password;
+  };
+
   const describeAuthError = (error, actionLabel) => {
     const code = String(error?.code || '');
     const fallback = String(error?.message || '不明なエラー');
@@ -892,6 +897,7 @@
     const displayName = String(form.get('displayName') || '').trim();
     const email = String(form.get('email') || '').trim().toLowerCase();
     const password = String(form.get('password') || '').trim();
+    const authPassword = normalizeAuthPassword(password);
 
     if (!displayName) {
       setMessage('名前を入力してください。');
@@ -932,7 +938,7 @@
       const functionsApi = getFunctionsApi();
 
       if (authInstance?.__isLocalAuth || !functionsApi) {
-        const result = await authInstance.createUserWithEmailAndPassword(email, password);
+        const result = await authInstance.createUserWithEmailAndPassword(email, authPassword);
         await result.user.updateProfile({ displayName });
         let profile = null;
         try {
@@ -951,7 +957,7 @@
         return;
       }
 
-      const result = await registerMemberAccount({ displayName, email, password });
+      const result = await registerMemberAccount({ displayName, email, password: authPassword });
       const customToken = String(result?.customToken || '');
       let credential = null;
 
@@ -1032,6 +1038,10 @@
     const form = new FormData(event.currentTarget);
     const email = String(form.get('email') || '').trim().toLowerCase();
     const password = String(form.get('password') || '');
+    const passwordCandidates = [...new Set([
+      password,
+      normalizeAuthPassword(password),
+    ])];
 
     if (!email || !password) {
       setMessage('メールアドレスとパスワードを入力してください。');
@@ -1063,7 +1073,27 @@
     }
 
     try {
-      const credential = await authInstance.signInWithEmailAndPassword(email, password);
+      let credential = null;
+      let lastLoginError = null;
+
+      for (const candidate of passwordCandidates) {
+        try {
+          credential = await authInstance.signInWithEmailAndPassword(email, candidate);
+          break;
+        } catch (loginError) {
+          lastLoginError = loginError;
+          const loginCode = String(loginError?.code || '');
+          if (candidate !== passwordCandidates[passwordCandidates.length - 1] && (loginCode.startsWith('auth/') || loginCode === 'member-record-not-ready')) {
+            continue;
+          }
+          throw loginError;
+        }
+      }
+
+      if (!credential) {
+        throw lastLoginError || Object.assign(new Error('Login is not ready yet.'), { code: 'failed-precondition' });
+      }
+
       await primeAuthToken(credential.user);
       const storedProfile = loadProfile() || {};
       const fallbackProfile = buildLoginFallbackProfile(credential.user, {
@@ -1209,6 +1239,9 @@
     if (authInstance) {
       authInstance.onAuthStateChanged(async (user) => {
         if (isLoginPage) {
+          if (authBusy) {
+            return;
+          }
           const stored = loadProfile();
           if (user && !isSessionActive(stored)) {
             try {
