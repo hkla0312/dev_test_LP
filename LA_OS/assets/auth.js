@@ -74,12 +74,6 @@
     const fallback = String(error?.message || '不明なエラー');
     const map = {
       'auth/email-already-in-use': 'このメールアドレスはすでに使われています。',
-      'auth/email-already-exists': 'このメールアドレスはすでに使われています。',
-      'functions/already-exists': 'このメールアドレスはすでに使われています。',
-      'functions/invalid-argument': '入力内容をご確認ください。',
-      'functions/permission-denied': '保存権限がありません。',
-      'functions/resource-exhausted': 'しばらく時間をおいてください。',
-      'functions/failed-precondition': '必要な準備がまだ完了していません。',
       'auth/invalid-email': 'メールアドレスの形式をご確認ください。',
       'auth/weak-password': 'パスワードの条件をご確認ください。',
       'auth/user-not-found': '会員情報が見つかりません。',
@@ -108,6 +102,10 @@
     }
   };
 
+  const sendRegistrationReceipt = async (profile, secret) => {
+    return { skipped: true, profile, secret };
+  };
+
   const bootstrapMemberProfile = async (user, fallbackProfile = {}) => {
     const functionsApi = getFunctionsApi();
     if (!functionsApi || !user?.uid) {
@@ -126,17 +124,6 @@
       console.warn('bootstrap member profile skipped', error);
       return null;
     }
-  };
-
-  const registerMemberAccount = async (payload) => {
-    const functionsApi = getFunctionsApi();
-    if (!functionsApi) {
-      throw Object.assign(new Error('Firebase Functions is not available.'), { code: 'failed-precondition' });
-    }
-
-    const callable = functionsApi.httpsCallable('registerMemberAccount');
-    const response = await callable(payload);
-    return response?.data || {};
   };
 
   const buildAuthIssue = (error, actionLabel, context = {}) => {
@@ -403,10 +390,11 @@
     return adapter;
   };
 
-  const persistSession = (profile) => {
+  const persistSession = (profile, secret = '') => {
     const expiresAt = Date.now() + SESSION_MS;
     saveProfile({
       ...profile,
+      secret,
       expiresAt,
     });
 
@@ -598,7 +586,6 @@
       createdAt: timestamp,
       updatedAt: timestamp,
     };
-
     const memberRef = db.collection('members').doc(user.uid);
     const memberSnapshot = await memberRef.get();
 
@@ -638,6 +625,23 @@
 
     try {
       await memberRef.set(member);
+
+      try {
+        const memberIdRef = db.collection('memberIds').doc(memberIdDocId(member.memberId));
+        const memberIdSnapshot = await memberIdRef.get();
+        if (!memberIdSnapshot.exists) {
+          await memberIdRef.set({
+            uid: user.uid,
+            memberId: member.memberId,
+            displayName: member.displayName,
+            createdAt: timestamp,
+          });
+        }
+      } catch (memberIdWriteError) {
+        console.warn('memberIds write skipped', memberIdWriteError);
+      }
+
+      return createProfilePayload(member, fallbackProfile);
     } catch (error) {
       if (String(error?.code || '') === 'permission-denied') {
         await primeAuthToken(user);
@@ -649,19 +653,6 @@
       }
       throw error;
     }
-
-    try {
-      await db.collection('memberIds').doc(memberIdDocId(member.memberId)).set({
-        uid: user.uid,
-        memberId: member.memberId,
-        displayName: member.displayName,
-        createdAt: timestamp,
-      });
-    } catch (memberIdWriteError) {
-      console.warn('memberIds write skipped', memberIdWriteError);
-    }
-
-    return createProfilePayload(member, fallbackProfile);
   };
 
   const formatMemberAuthError = (error, actionLabel) => {
@@ -669,12 +660,6 @@
     const fallback = String(error?.message || '不明なエラー');
     const map = {
       'auth/email-already-in-use': 'このメールアドレスはすでに使用されています。',
-      'auth/email-already-exists': 'このメールアドレスはすでに使用されています。',
-      'functions/already-exists': 'このメールアドレスはすでに使用されています。',
-      'functions/invalid-argument': '入力内容を確認してください。',
-      'functions/permission-denied': '保存権限がありません。',
-      'functions/resource-exhausted': 'しばらく時間をおいてください。',
-      'functions/failed-precondition': '必要な準備がまだ完了していません。',
       'auth/invalid-email': 'メールアドレスの形式を確認してください。',
       'auth/weak-password': 'パスワードの条件を満たしてください。',
       'auth/user-not-found': '該当する会員情報が見つかりません。',
@@ -776,7 +761,9 @@
     if (stored) {
       if (displayNameInput && !displayNameInput.value) displayNameInput.value = stored.displayName || '';
       if (emailInput && !emailInput.value) emailInput.value = stored.email || '';
+      if (passwordInput && !passwordInput.value && stored.secret) passwordInput.value = stored.secret;
       if (loginEmailInput && !loginEmailInput.value) loginEmailInput.value = stored.email || '';
+      if (loginPasswordInput && !loginPasswordInput.value && stored.secret) loginPasswordInput.value = stored.secret;
     }
   };
 
@@ -842,64 +829,55 @@
     });
 
     try {
-      if (authInstance?.__isLocalAuth) {
-        const result = await authInstance.createUserWithEmailAndPassword(email, password);
-        await result.user.updateProfile({ displayName });
+      const result = await authInstance.createUserWithEmailAndPassword(email, password);
+      await result.user.updateProfile({ displayName });
+
+      try {
         const profile = await saveMemberRecord(result.user, fallbackProfile);
-        persistSession(profile);
+        persistSession(profile, password);
         redirectToMember();
-        return;
-      }
-
-      const result = await registerMemberAccount({ displayName, email, password });
-      const customToken = String(result?.customToken || '');
-      let credential = null;
-
-      if (customToken) {
-        try {
-          credential = await authInstance.signInWithCustomToken(customToken);
-        } catch (tokenError) {
-          console.warn('custom token sign-in skipped', tokenError);
-        }
-      }
-
-      if (!credential) {
-        const deadline = Date.now() + 15000;
-        let lastError = null;
-
-        while (Date.now() < deadline) {
+      } catch (firestoreError) {
+        if (String(firestoreError?.code || '') === 'permission-denied') {
           try {
-            credential = await authInstance.signInWithEmailAndPassword(email, password);
-            break;
-          } catch (signInError) {
-            lastError = signInError;
-            const signInCode = String(signInError?.code || '');
-            if (!signInCode.startsWith('auth/')) {
-              throw signInError;
+            const profile = await waitForMemberRecord(result.user, fallbackProfile);
+            persistSession(profile, password);
+            redirectToMember();
+            return;
+          } catch (waitError) {
+            try {
+              await authInstance.signOut();
+            } catch {
+              // ignore
             }
-            await pause(900);
+            showAuthIssue(waitError, '登録');
+            return;
           }
         }
-
-        if (!credential) {
-          throw lastError || Object.assign(new Error('Login is not ready yet.'), { code: 'failed-precondition' });
+        try {
+          await result.user.delete();
+        } catch {
+          // ignore rollback failure
+        }
+        showAuthIssue(firestoreError, '登録');
+      }
+    } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        const actuallyInUse = await isEmailActuallyInUse(email);
+        if (actuallyInUse === false) {
+          try {
+            const retry = await authInstance.createUserWithEmailAndPassword(email, password);
+            await retry.user.updateProfile({ displayName });
+            const profile = await saveMemberRecord(retry.user, fallbackProfile);
+            persistSession(profile, password);
+            redirectToMember();
+            return;
+          } catch (retryError) {
+            showAuthIssue(retryError, '登録');
+            return;
+          }
         }
       }
 
-      await primeAuthToken(credential.user);
-      const profile = result.member || await waitForMemberRecord(credential.user, fallbackProfile, 15000);
-      persistSession(profile);
-      redirectToMember();
-    } catch (error) {
-      const code = String(error?.code || '');
-      if (code === 'auth/email-already-in-use' || code === 'auth/email-already-exists' || code === 'functions/already-exists') {
-        showAuthIssue(error, '登録');
-        return;
-      }
-      if (code === 'failed-precondition' || code === 'functions/failed-precondition') {
-        showAuthIssue(error, '登録');
-        return;
-      }
       showAuthIssue(error, '登録');
     }
   }
@@ -943,22 +921,18 @@
     try {
       const credential = await authInstance.signInWithEmailAndPassword(email, password);
       await primeAuthToken(credential.user);
-      const storedProfile = loadProfile() || {};
-      const profile = createProfilePayload({
-        uid: credential.user.uid,
-        displayName: credential.user.displayName || storedProfile.displayName || '',
-        email: credential.user.email || email,
-        emailVerified: Boolean(credential.user.emailVerified),
-        memberId: storedProfile.memberId || '',
-        version: storedProfile.version || 'v0.01',
-        archiveAccess: storedProfile.archiveAccess ?? true,
-        currentProgress: storedProfile.currentProgress ?? 38,
-        requiredProgress: storedProfile.requiredProgress ?? 100,
-        versionUpPending: storedProfile.versionUpPending ?? true,
-        xAccount: storedProfile.xAccount || '',
-      }, storedProfile);
-      persistSession(profile);
-      redirectToMember();
+      try {
+        const profile = await waitForMemberRecord(credential.user, loadProfile() || {});
+        persistSession(profile, password);
+        redirectToMember();
+      } catch (profileError) {
+        try {
+          await authInstance.signOut();
+        } catch {
+          // ignore
+        }
+        showAuthIssue(profileError, 'ログイン');
+      }
     } catch (error) {
       showAuthIssue(error, 'ログイン');
     }
