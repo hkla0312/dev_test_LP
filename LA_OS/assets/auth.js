@@ -845,10 +845,18 @@
     });
 
     try {
-      if (authInstance?.__isLocalAuth) {
+      const functionsApi = getFunctionsApi();
+
+      if (authInstance?.__isLocalAuth || !functionsApi) {
         const result = await authInstance.createUserWithEmailAndPassword(email, password);
         await result.user.updateProfile({ displayName });
-        const profile = await saveMemberRecord(result.user, fallbackProfile);
+        let profile = null;
+        try {
+          profile = await saveMemberRecord(result.user, fallbackProfile);
+        } catch (firestoreError) {
+          console.warn('member record save skipped', firestoreError);
+          profile = fallbackProfile;
+        }
         persistSession(profile);
         redirectToMember();
         return;
@@ -891,7 +899,12 @@
 
       await primeAuthToken(credential.user);
 
-      const profile = result.member || await waitForMemberRecord(credential.user, fallbackProfile, 15000);
+      const profile = result.member || fallbackProfile;
+      try {
+        bootstrapMemberProfile(credential.user, fallbackProfile).catch(() => {});
+      } catch {
+        // ignore
+      }
       persistSession(profile);
       redirectToMember();
     } catch (error) {
