@@ -26,3 +26,29 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (max-width:760px) { .error-type-item summary { grid-template-columns:1fr auto; }.error-type-item summary strong { grid-column:1; }.error-type-item summary span { grid-column:1; }.error-type-item summary::after { grid-column:2; grid-row:1 / span 3; } }
 @media (max-width:760px) { .list-filter { align-items:stretch; flex-wrap:wrap; }.list-filter input, .list-filter select { width:100%; flex-basis:100%; }.action-menu { margin-left:4px; }.action-menu-body { position:fixed; right:14px; left:14px; top:auto; }.filter-count { padding:2px 0; } }
 @media (max-width: 760px) { .topbar { height: auto; min-height: 58px; padding-top: 8px; padding-bottom: 8px; }.table-wrap td:last-child { min-width: 0; } }
+
+/* LA_LPの静かなターミナル感だけを取り入れる。レイアウト・操作仕様は変更しない。 */
+body { background-image: radial-gradient(circle at 88% 0, rgba(56,245,255,.10), transparent 31rem), linear-gradient(90deg, transparent 49.8%, rgba(0,159,209,.035) 50%, transparent 50.2%); background-size:auto, 42px 42px; }
+.sidebar { background:linear-gradient(180deg,#0b1019 0%,#101b27 100%); border-right-color:#213848; box-shadow:8px 0 24px rgba(4,10,16,.12); }
+.sidebar .brand { color:#38f5ff; border-bottom-color:rgba(56,245,255,.18); letter-spacing:.02em; text-shadow:0 0 16px rgba(56,245,255,.26); }
+.sidebar .brand small,.sidebar .nav-item,.sidebar .review-nav { color:#c7d4df; }
+.sidebar .nav-item { border-left:2px solid transparent; border-radius:0 4px 4px 0; }
+.sidebar .nav-item.active,.sidebar .nav-item:hover { border-left-color:#38f5ff; background:linear-gradient(90deg,rgba(56,245,255,.16),transparent); color:#38f5ff; }
+.sidebar .review-nav:hover { color:#38f5ff; }
+.terminal-label,.page-head h1,.eyebrow { letter-spacing:.11em; }
+.topbar { position:relative; background:color-mix(in srgb,var(--panel) 94%,#dffbff); }
+.topbar::before { content:''; position:absolute; inset:0 0 auto; height:2px; background:linear-gradient(90deg,#38f5ff,rgba(56,245,255,.08) 45%,rgba(232,67,147,.28)); }
+.page-head h1 { font-size:25px; }
+.card { border-radius:3px; box-shadow:0 10px 26px rgba(11,23,35,.07); }
+.card::before { content:''; display:block; width:28px; height:2px; margin:-20px 0 18px; background:#38f5ff; opacity:.75; }
+.card:hover { box-shadow:0 12px 28px rgba(11,23,35,.12); }
+.login-view { background:radial-gradient(circle at 50% 20%,rgba(56,245,255,.14),transparent 28rem),#080c14; }
+.login-card { position:relative; overflow:hidden; background:rgba(255,255,255,.97); }
+.login-card::before { content:''; position:absolute; inset:0 auto 0 0; width:3px; background:linear-gradient(#38f5ff,#9d70ff); }
+.login-card h1,.sidebar .brand small,.terminal-label { font-size:0; }
+.login-card h1::after { content:'LA_ADMIN'; font-size:30px; letter-spacing:.08em; }
+.sidebar .brand small::after { content:'LA_ADMIN'; font-size:10px; letter-spacing:.14em; }
+.terminal-label::after { content:'LA_ADMIN'; font-size:12px; }
+[data-theme=dark] .topbar { background:color-mix(in srgb,var(--panel) 92%,#08212b); }
+[data-theme=dark] .login-card { background:#111a25; }
+@media (max-width:760px) { .card::before { margin:-14px 0 13px; }.page-head h1 { font-size:21px; } }
