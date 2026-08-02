@@ -8,3 +8,12 @@ form { display:grid; gap:18px; } label { display:grid; gap:7px; font-weight:700;
 button { min-height:48px; border:0; border-radius:5px; color:#fff; background:var(--accent); font:inherit; font-weight:800; cursor:pointer; } button:disabled { opacity:.65; cursor:wait; }.error { margin:0; color:#b52435; font-weight:700; }.note { margin:24px 0 0; color:var(--muted); font-size:.9rem; }
 .notice { margin:0 0 18px; padding:10px 12px; border-left:3px solid var(--accent); background:#e9f7fa; color:#23505c; font-size:.9rem; }
 @media (max-width:520px) { .login-page { padding:16px; }.login-card { padding:28px 22px; }.login-card h1 { font-size:1.65rem; } }
+
+/* LPの暗いターミナル感をログイン画面へ控えめに反映する。 */
+:root { --accent:#38f5ff; --ink:#eaf4f8; --muted:#a9bac8; --line:#2c4555; --panel:#101925; --bg:#070b11; }
+body { background:radial-gradient(circle at 50% 0,rgba(56,245,255,.17),transparent 30rem),linear-gradient(90deg,transparent 49.8%,rgba(56,245,255,.045) 50%,transparent 50.2%),var(--bg); background-size:auto,42px 42px,auto; }
+.login-card { position:relative; overflow:hidden; border:1px solid rgba(56,245,255,.34); border-top:3px solid var(--accent); box-shadow:0 24px 64px rgba(0,0,0,.42); }
+.login-card::before { content:''; position:absolute; inset:0 auto 0 0; width:2px; background:linear-gradient(var(--accent),#9d70ff); }
+.eyebrow { color:var(--accent); text-shadow:0 0 14px rgba(56,245,255,.25); }.login-card h1 { letter-spacing:.09em; font-size:1.85rem; }
+input { color:var(--ink); background:#0a111a; border-color:#30495b; }.notice { background:#0c2630; color:#c8f7ff; }.note,.lead { color:var(--muted); }
+button { color:#061016; background:var(--accent); box-shadow:0 0 18px rgba(56,245,255,.16); } button:hover { filter:brightness(1.06); }
