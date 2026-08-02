@@ -2179,12 +2179,14 @@ body {
 }
 .auth-gate[hidden],.os-shell[hidden]{display:none!important}
 .login-success-dialog{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:20px;background:rgba(247,247,249,.78)}
+.login-success-dialog[hidden]{display:none!important}
 .login-success-dialog>div{width:min(420px,100%);display:grid;gap:16px;padding:28px;border:2px solid rgba(220,227,236,1);background:#fff;color:var(--text);text-align:center}
 .login-success-dialog p{margin:0;color:var(--cyan);font:700 .78rem var(--font-ui);letter-spacing:.12em}
 .login-success-dialog h2{margin:0;font-size:1.35rem}
 .login-success-dialog span{color:var(--muted)}
 .login-success-dialog input{width:100%;padding:12px;border:2px solid rgba(220,227,236,1);background:#fff;color:var(--text);font:1rem var(--font-ui)}
-.login-success-dialog button{min-height:50px;border:2px solid var(--cyan);background:var(--cyan-soft);color:var(--cyan);font:700 .9rem var(--font-ui);cursor:pointer}
+.login-success-dialog button,
+.login-success-dialog a{display:flex;align-items:center;justify-content:center;min-height:50px;border:2px solid var(--cyan);background:var(--cyan-soft);color:var(--cyan);font:700 .9rem var(--font-ui);cursor:pointer;text-decoration:none}
 .auth-loader{position:fixed;inset:0;z-index:100;display:grid;place-content:center;gap:14px;background:#f7f7f9;color:var(--cyan);text-align:center;transition:opacity .35s ease,visibility .35s ease}
 .auth-loader strong{font:700 clamp(2.8rem,14vw,4.8rem)/1 var(--font-display);letter-spacing:.12em}
 .auth-loader span{font:600 .7rem var(--font-ui);letter-spacing:.1em;color:var(--muted)}
