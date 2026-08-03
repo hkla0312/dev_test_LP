@@ -4,7 +4,6 @@
 
   const $ = selector => document.querySelector(selector);
   const AXES = ["vocal", "performance", "emotion", "character", "worldview", "visual"];
-  const DEFAULT_ANALYTICS = { vocal: 20, performance: 20, emotion: 20, character: 15, worldview: 15, visual: 10 };
   const SIGNAL_WEIGHTS = {
     song: { vocal: 5, performance: 2, emotion: 2 },
     stage: { performance: 5, visual: 2, worldview: 1 },
@@ -58,7 +57,8 @@
   const normalizeTotals = (totals) => {
     const values = AXES.map(axis => Math.max(0, Number(totals[axis] || 0)));
     const total = values.reduce((sum, value) => sum + value, 0);
-    if (!total) return { ...DEFAULT_ANALYTICS };
+    // SIGNAL未受信時に仮のレーダーを表示しない。
+    if (!total) return AXES.reduce((result, axis) => ({ ...result, [axis]: 0 }), {});
     const ratios = values.map(value => Math.round(value / total * 100));
     ratios[ratios.length - 1] += 100 - ratios.reduce((sum, value) => sum + value, 0);
     return AXES.reduce((result, axis, index) => {
