@@ -115,7 +115,7 @@
     .where("environment", "==", "prod")
     .onSnapshot(snapshot => {
       events = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .map(doc => ({ ...doc.data(), id: doc.id }))
         .sort((a, b) => String(a.eventDate || "").localeCompare(String(b.eventDate || "")));
       render();
     }, error => {
@@ -128,7 +128,8 @@
     .where("lpVisible", "==", true)
     .where("environment", "==", "prod")
     .onSnapshot(snapshot => {
-      artists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Firestore文書内の任意idではなく、必ず文書IDでSIGNALを紐付ける。
+      artists = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       render();
     }, error => {
       console.error("LP artist feed could not be loaded.", error);
@@ -141,7 +142,7 @@
       .where("isDeleted", "==", false)
     .onSnapshot(snapshot => {
       artistSignals = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .map(doc => ({ ...doc.data(), id: doc.id }))
         .filter(signal => signal.moderationStatus !== "blocked");
       render();
     }, error => {
