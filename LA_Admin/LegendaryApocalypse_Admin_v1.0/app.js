@@ -72,7 +72,7 @@
   }
   function collectionSnapshot(name) {
     state.unsubscribers.push(state.db.collection(name).onSnapshot(snapshot => {
-      state.data[name] = snapshot.docs.map(document => ({ id: document.id, ...document.data() }));
+      state.data[name] = snapshot.docs.map(document => ({ ...document.data(), id: document.id }));
       delete state.collectionErrors[name];
       if (name === 'errorReports') {
         const badge = $('#errorReportBadge');
@@ -169,7 +169,7 @@
   function signalPage() {
     const artist = state.selectedArtist, filter = state.filters;
     const axisNames = [...new Set(state.data.artistSignals.flatMap(signal => Object.keys(auditAxes(signal))))].sort();
-    const signals = (artist ? state.data.artistSignals.filter(signal => signal.artistId === artist.id) : [])
+    const signals = (artist ? state.data.artistSignals.filter(signal => [signal.artistId, signal.artistKey].map(value => String(value || '')).filter(Boolean).some(value => [artist.id, artist.artistKey].map(item => String(item || '')).includes(value))) : [])
       .filter(signal => state.showDeletedSignals || !signal.isDeleted)
       .filter(signal => filter.signalSource === 'all' || auditSourceKey(signal) === filter.signalSource)
       .filter(signal => filter.signalStatus === 'all' || String(auditStatus(signal)).toLowerCase() === filter.signalStatus)
