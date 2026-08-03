@@ -19,7 +19,7 @@
     data: { events: [], artists: [], members: [], reservations: [], artistSignals: [], errorReports: [], adminLogs: [] },
     settings: { signalEnabled: true, systemEnabled: true }, unsubscribers: [], collectionErrors: {}
   };
-  const ACTIONS = ['EVENT_CREATE','EVENT_UPDATE','EVENT_ARCHIVE','EVENT_RESTORE','EVENT_DELETE','ARTIST_CREATE','ARTIST_UPDATE','ARTIST_DELETE','ARTIST_THEME_COLOR_GENERATE','MEMBER_DELETE','MEMBER_RESTORE','MEMBER_FINANCE_EDIT','MEMBER_FINANCE_LOCK','PROGRESS_ADD','LICENSE_CHANGE','SIGNAL_DELETE','SIGNAL_RESTORE','ERROR_REPORT_RESOLVE'];
+  const ACTIONS = ['EVENT_CREATE','EVENT_UPDATE','EVENT_ARCHIVE','EVENT_RESTORE','EVENT_DELETE','ARTIST_CREATE','ARTIST_UPDATE','ARTIST_DELETE','ARTIST_THEME_COLOR_GENERATE','SIGNAL_AGGREGATE_RESET','MEMBER_DELETE','MEMBER_RESTORE','MEMBER_FINANCE_EDIT','MEMBER_FINANCE_LOCK','PROGRESS_ADD','LICENSE_CHANGE','SIGNAL_DELETE','SIGNAL_RESTORE','ERROR_REPORT_RESOLVE'];
   const ERROR_TYPE_CATALOG = [
     ['LAOS-AUTH-001','認証','メールアドレス重複','登録済みのメールアドレスです。'],
     ['LAOS-AUTH-002','認証','メール形式不正','メールアドレスの形式を確認してください。'],
@@ -201,7 +201,7 @@
     const filter = state.filters;
     const artists = state.data.artists.filter(artist => filterText(artist, ['artistKey','name','genre'], filter.artistSearch) && (filter.artistRole === 'all' || artist.role === filter.artistRole));
     const row = artist => `<tr><td>${escapeHtml(artist.artistKey || '—')}</td><td>${escapeHtml(artist.name)}</td><td>${escapeHtml(artist.role || 'FRESH')}</td><td>${Number(artist.appearanceCount || 0)}</td><td>${escapeHtml(artist.genre || '—')}</td><td>${artist.environment === 'prod' && artist.lpVisible ? '公開中' : 'DEV / 非公開'}</td><td><button class="primary compact" data-artist-edit="${artist.id}">編集</button>${actionMenu(`<button class="secondary" data-artist-publish="${artist.id}">${artist.environment === 'prod' ? 'DEVへ戻す' : '本番公開'}</button><button class="danger" data-artist-delete="${artist.id}">削除</button>`)}</td></tr>`;
-    return pageHead('ARTIST', 'アーティスト管理', '<button class="primary" data-action="artist-new">新規アーティストを追加</button>') + `<section class="card"><div class="artist-theme-tools"><div><h2>画像テーマカラー</h2><p class="sub">画像から主要な色を抽出し、LPのアーティスト画像背景へ反映します。既存画像にも一括で適用できます。</p></div><button class="secondary" type="button" data-action="artist-theme-generate">登録済み画像から一括生成</button></div><div class="list-filter"><input id="artistSearch" value="${escapeHtml(filter.artistSearch)}" placeholder="名前・キー・ジャンルで検索"><select id="artistRole"><option value="all">ロール：すべて</option>${['REGULAR','CORE','FRESH','ORGANIZER'].map(role => `<option ${filter.artistRole === role ? 'selected' : ''}>${role}</option>`).join('')}</select><span class="filter-count">${artists.length}件</span></div>${table(artists, ['ARTIST KEY','名前','ロール','出演回数','ジャンル','LP','操作'], row)}</section>`;
+    return pageHead('ARTIST', 'アーティスト管理', '<button class="secondary" data-action="signal-aggregate-reset">SIGNAL集計を初期化</button><button class="primary" data-action="artist-new">新規アーティストを追加</button>') + `<section class="card"><div class="artist-theme-tools"><div><h2>画像テーマカラー</h2><p class="sub">画像から主要な色を抽出し、LPのアーティスト画像背景へ反映します。既存画像にも一括で適用できます。</p></div><button class="secondary" type="button" data-action="artist-theme-generate">登録済み画像から一括生成</button></div><div class="list-filter"><input id="artistSearch" value="${escapeHtml(filter.artistSearch)}" placeholder="名前・キー・ジャンルで検索"><select id="artistRole"><option value="all">ロール：すべて</option>${['REGULAR','CORE','FRESH','ORGANIZER'].map(role => `<option ${filter.artistRole === role ? 'selected' : ''}>${role}</option>`).join('')}</select><span class="filter-count">${artists.length}件</span></div>${table(artists, ['ARTIST KEY','名前','ロール','出演回数','ジャンル','LP','操作'], row)}</section>`;
   }
   function memberPage() {
     const filter = state.filters;
@@ -323,9 +323,27 @@
     });
   }
   async function setEnvironment(collection, item, environment) { const warning = environment === 'prod' ? '本番公開します。LPへ表示される設定です。' : '開発環境へ戻します。'; confirmAction(environment === 'prod' ? '本番公開' : 'DEVへ戻す', warning, async () => { await state.db.collection(collection).doc(item.id).update({ environment, updatedAt:serverTime() }); await adminLog(collection === 'events' ? 'EVENT_UPDATE' : 'ARTIST_UPDATE', collection.slice(0,-1), item.id, item.title || item.name, `environment を ${environment} に変更`); localStorage.setItem('la-admin-environment', environment); toast('環境設定を更新しました。'); }, environment === 'prod' ? '本番公開する' : 'DEVへ戻す'); }
+  async function resetSignalAggregates() {
+    // artistSignals本体やアーティスト情報には触れず、LP表示用の旧集計だけを消去する。
+    const artists = state.data.artists;
+    const chunkSize = 450;
+    for (let index = 0; index < artists.length; index += chunkSize) {
+      const batch = state.db.batch();
+      artists.slice(index, index + chunkSize).forEach(artist => {
+        batch.update(state.db.collection('artists').doc(artist.id), {
+          signalAggregate: firebase.firestore.FieldValue.delete(),
+          updatedAt: serverTime()
+        });
+      });
+      await batch.commit();
+    }
+    await adminLog('SIGNAL_AGGREGATE_RESET', 'artist', 'all', 'ALL ARTISTS', 'signalAggregate reset');
+    toast('SIGNAL集計を初期化しました。');
+  }
   function bindPage() {
     $('[data-action="event-new"]') && ($('[data-action="event-new"]').onclick = () => openEvent());
     $('[data-action="artist-new"]') && ($('[data-action="artist-new"]').onclick = () => openArtist());
+    $('[data-action="signal-aggregate-reset"]') && ($('[data-action="signal-aggregate-reset"]').onclick = () => confirmAction('SIGNAL集計を初期化', '全アーティストのLP表示用集計を削除します。artistSignals本体やアーティスト情報は削除しません。', resetSignalAggregates, '初期化する'));
     $('[data-action="artist-theme-generate"]') && ($('[data-action="artist-theme-generate"]').onclick = () => confirmAction('画像テーマカラーを一括生成', '画像を登録済みの全アーティストへ、主要色を抽出して保存します。LPにも順次反映されます。', generateArtistThemeColors, '生成する'));
     $$('[data-event-edit]').forEach(button => button.onclick = () => openEvent(state.data.events.find(item => item.id === button.dataset.eventEdit)));
     $$('[data-artist-edit]').forEach(button => button.onclick = () => openArtist(state.data.artists.find(item => item.id === button.dataset.artistEdit)));
