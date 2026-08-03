@@ -585,3 +585,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.artist-signal-panel__empty {
+  display: grid;
+  gap: 8px;
+  min-height: 178px;
+  padding: 18px;
+  border: 1px dashed rgba(146, 163, 190, .32);
+  background: rgba(12, 17, 27, .34);
+  place-items: center;
+  text-align: center;
+}
+
+.artist-signal-empty strong {
+  color: var(--cyan);
+  font: 600 10px var(--font-display);
+  letter-spacing: .1em;
+}
+
+.artist-signal-empty p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.artist-signal-empty span {
+  color: var(--sub);
+  font-size: 11px;
+}
